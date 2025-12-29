@@ -13,32 +13,19 @@ class Fragrance(Base):
     name = Column(String(255), nullable=False, index=True)
     brand = Column(String(100), nullable=False, index=True)
     description = Column(Text)
-    
-   
     fragrance_family = Column(String(100))  
     subfamilies = Column(ARRAY(String))
-    
-
     notes_top = Column(ARRAY(String))
     notes_middle = Column(ARRAY(String))
     notes_base = Column(ARRAY(String))
-    
-  
     intensity = Column(String(50)) 
     longevity = Column(String(50)) 
-    
-
     launch_year = Column(Integer)
     perfumer = Column(String(200))
     gender = Column(String(20)) 
-    
-    
     price_min = Column(Numeric(10, 2))
     price_max = Column(Numeric(10, 2))
-    
- 
-    vector_id = Column(String, index=True)
-    
+    vector_id = Column(String, index=True) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     note_objects = relationship("Note", secondary="fragrance_notes")

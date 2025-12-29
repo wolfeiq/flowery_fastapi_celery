@@ -7,10 +7,10 @@ from ..database import Base
 
 class UserFragrance(Base):
     __tablename__ = "user_fragrances"
+    
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     fragrance_id = Column(UUID(as_uuid=True), ForeignKey("fragrances.id"), nullable=False, index=True)
-    
     rating = Column(Integer)
     owned = Column(Boolean, default=False)
     wishlist = Column(Boolean, default=False)

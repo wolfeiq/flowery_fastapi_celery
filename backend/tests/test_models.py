@@ -3,7 +3,7 @@ from app.models import User, ScentMemory, MemoryType
 
 db = SessionLocal()
 
-user = User(email="test@test.com", hashed_password="hash123", full_name="Test User")
+user = User(email="test4@test.com", hashed_password="hash123", full_name="Test User 4")
 db.add(user)
 db.commit()
 

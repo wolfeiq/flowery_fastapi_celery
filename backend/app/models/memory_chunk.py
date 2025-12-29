@@ -12,20 +12,13 @@ class MemoryChunk(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     memory_id = Column(UUID(as_uuid=True), ForeignKey("scent_memories.id", ondelete="CASCADE"), nullable=False, index=True)
-    
     content = Column(Text, nullable=False)
     chunk_index = Column(Integer, nullable=False)
-    
     vector_id = Column(Text, unique=True, index=True)
     embedding_model = Column(Text)
-    
-  
     chunk_metadata = Column(JSON)  
-    
-
     char_count = Column(Integer)
     word_count = Column(Integer)
-    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     memory = relationship("ScentMemory", back_populates="chunks")
