@@ -36,7 +36,7 @@ build in public @portable_writer on X
 
 ## Next Steps
 
-- Build FastAPI endpoints (auth, upload, query)
+- Build FastAPI endpoints (auth, upload, query) ✅
 - Add Celery tasks for document processing
 - Integrate a vector database (Pinecone or ChromaDB)
 - Connect LLM providers (OpenAI)
