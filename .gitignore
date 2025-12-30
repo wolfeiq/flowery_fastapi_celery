@@ -48,3 +48,13 @@ yarn-error.log
 
 
 .python-version
+
+
+chroma_db/
+chromadb/
+
+
+uploads/
+
+
+
