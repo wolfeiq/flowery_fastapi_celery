@@ -37,10 +37,18 @@ build in public @portable_writer on X
 ## Next Steps
 
 - Build FastAPI endpoints (auth, upload, query) ✅
-- Add Celery tasks for document processing
-- Integrate a vector database (Pinecone or ChromaDB)
+- Add Celery tasks for document processing ✅
+- Integrate a vector database (ChromaDB) ✅
 - Connect LLM providers (OpenAI)
 - Automate fine-tuning and deployment
+- Frontend
+
+Basically:
+
+1. Vision AI for image uploads
+2. Scent Extraction
+3. Auto-update ScentProfile
+4. PDF Processing
 
 
 ## Deadline

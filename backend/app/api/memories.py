@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from pathlib import Path
 import shutil
+from ..tasks.process_memory import process_memory_task
 import uuid
 
 from ..database import get_db
@@ -59,8 +60,8 @@ async def upload_memory(
     
     db.add(memory)
     db.commit()
-    
-    # celery!!!
+    print(f"Queuing task for memory: {memory.id}")
+    process_memory_task.delay(str(memory.id))
 
     return {"id": str(memory.id), "title": title, "status": "uploaded"}
 
