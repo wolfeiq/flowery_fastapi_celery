@@ -42,13 +42,15 @@ build in public @portable_writer on X
 - Connect LLM providers (OpenAI) ✅
 - Automate fine-tuning and deployment ✅
 - Frontend
+- DevOps with Kubernetes
 
 Basically:
 
-1. Vision AI for image uploads
-2. Scent Extraction
-3. Auto-update ScentProfile
-4. PDF Processing
+1. Vision AI for image uploads ✅
+2. Scent Extraction ✅
+3. Auto-update ScentProfile ✅
+4. PDF Processing ✅
+5. Genius Api for song processing ✅
 
 
 ## Deadline
