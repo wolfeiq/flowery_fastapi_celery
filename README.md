@@ -22,11 +22,11 @@ build in public @portable_writer on X
 1. User uploads a memory
 2. `ScentMemory` is created
 3. Background processing:
-   - Image analysis
+   - Image analysis with OpenAI
    - Text enhancement
    - Chunking
    - Embedding
-   - Scent extraction
+   - Scent extraction with OpenAI
 4. User submits a query
 5. Relevant chunks and profile data are retrieved
 6. LLM generates recommendations
@@ -39,8 +39,8 @@ build in public @portable_writer on X
 - Build FastAPI endpoints (auth, upload, query) ✅
 - Add Celery tasks for document processing ✅
 - Integrate a vector database (ChromaDB) ✅
-- Connect LLM providers (OpenAI)
-- Automate fine-tuning and deployment
+- Connect LLM providers (OpenAI) ✅
+- Automate fine-tuning and deployment ✅
 - Frontend
 
 Basically:
@@ -54,6 +54,17 @@ Basically:
 ## Deadline
 01.01.2026
 
+## Security
+
+✅ Input sanitization (HTML/XSS prevention)
+✅ Rate limiting (60 req/min)
+✅ CORS restrictions
+✅ Security headers
+✅ Admin-only endpoints for Fine-Tuning based on Past Queries with High Ratings
+✅ Strong password requirements
+✅ SQLAlchemy prevents SQL injection
+✅ JWT token expiration
+✅ Environment-based config
 
 ## Model Logic
 

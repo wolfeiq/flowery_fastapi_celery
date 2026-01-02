@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 import uuid
-
 import jwt
 from jwt.exceptions import InvalidTokenError
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,10 +8,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
-
 from ..database import get_db
 from ..models import User
 from ..core.config import settings
+from ..core.validation import validate_email, validate_password, sanitize_text
 
 # JWT Token Auth following FastAPI documentation pattern: https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/
 
@@ -93,17 +92,26 @@ async def register(
     user_data: UserCreate,
     db: Annotated[Session, Depends(get_db)]
 ):
-    if db.query(User).filter(User.email == user_data.email).first():
+
+    email = validate_email(user_data.email)
+    full_name = sanitize_text(user_data.full_name, max_length=100)
+
+
+    if db.query(User).filter(User.email == email).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
+
+    validate_password(user_data.password)
+    
     user = User(
-        email=user_data.email,
+        email=email,
         hashed_password=get_password_hash(user_data.password),
-        full_name=user_data.full_name
+        full_name=full_name
     )
+    
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -115,7 +123,9 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)]
 ):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    
+    email = validate_email(form_data.username)
+    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -14,5 +14,5 @@ from .query_log import QueryLog
 from .recommendation import Recommendation
 from .training_example import TrainingExample
 from .spotify_link import SpotifyLink
-from .fine_tuning_job import FineTuningJob
+from .fine_tuning_job import FineTuningJob, JobStatus
 

@@ -42,6 +42,6 @@ class ScentMemory(Base):
     image_analysis = relationship("ImageAnalysis", back_populates="memory", uselist=False,cascade="all, delete-orphan")
     extracted_scents = relationship("ExtractedScent", back_populates="memory", cascade="all, delete-orphan")
     spotify_links = relationship("SpotifyLink", back_populates="memory", cascade="all, delete-orphan")
-
+    spotify_links = relationship("SpotifyLink", back_populates="memory", cascade="all, delete-orphan")
     def __repr__(self):
         return f"<ScentMemory(id={self.id}, title='{self.title}', type={self.memory_type})>"

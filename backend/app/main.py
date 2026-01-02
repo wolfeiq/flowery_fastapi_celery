@@ -1,21 +1,54 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import auth, memories, query, spotify
-
+from .api import profile
+from .api import fine_tuning
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from .middleware.rate_limit import rate_limit_middleware
+from .core.config import settings
+from .core.logging_config import setup_logging
+from .middleware.logging_middleware import log_requests
+from .api import auth, memories, query, profile, fine_tuning, music
 #from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 #Will deploy with nginx + SSL certificate -> with Docker
 
-app = FastAPI(title="Scent Memory API")
+logger = setup_logging()
+
+app = FastAPI(
+    title="Scent Memory API",
+    docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
+    redoc_url=None
+)
+
+app.middleware("http")(log_requests)
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
+    max_age=600
 )
 
+app.middleware("http")(rate_limit_middleware)
+
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["api.scentmemory.com", "*.scentmemory.com"]
+    )
 
 #if settings.ENVIRONMENT == "production":
     #app.add_middleware(HTTPSRedirectMiddleware)
@@ -24,7 +57,12 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
 app.include_router(spotify.router, prefix="/api/spotify", tags=["spotify"])
+app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
+app.include_router(fine_tuning.router, prefix="/api/fine-tuning", tags=["fine-tuning"])
+app.include_router(music.router, prefix="/api/v1/music", tags=["music"])
 
 @app.get("/")
 def root():
     return {"message": "Scent Memory API v0.1"}
+
+logger.info(f"Application started in {settings.ENVIRONMENT} mode")
