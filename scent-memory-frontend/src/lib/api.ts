@@ -79,9 +79,9 @@ export const profileApi = {
 
 export const musicApi = {
   link: (data: { memory_id: string; artist_name: string; track_name: string; spotify_url?: string }) =>
-    api.post('/music/link', data),
+    api.post('/v1/music/link', data),
   
-  getForMemory: (memoryId: string) => api.get(`/music/memory/${memoryId}`),
+  getForMemory: (memoryId: string) => api.get(`/v1/music/memory/${memoryId}`),
 };
 
 

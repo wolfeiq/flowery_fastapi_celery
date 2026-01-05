@@ -1,6 +1,6 @@
 from .celery_app import celery_app
 from ..database import SessionLocal
-from ..models import SpotifyLink, ExtractedScent
+from ..models import SpotifyLink, ExtractedScent, ScentMemory
 from ..services.music_service import search_and_analyze_song
 import redis
 import json
@@ -12,7 +12,11 @@ def process_music_task(user_id: str, memory_id: str, artist: str, track: str, sp
     db = SessionLocal()
     
     try:
+        memory = db.query(ScentMemory).filter(ScentMemory.id == memory_id).first()
+
+        
         result = search_and_analyze_song(artist, track, spotify_url)
+
     
         link = SpotifyLink(
             memory_id=memory_id,
@@ -24,6 +28,7 @@ def process_music_task(user_id: str, memory_id: str, artist: str, track: str, sp
             lyrics_analysis=result['analysis']
         )
         db.add(link)
+
         scent_data = result['analysis'].get('scent_associations', {})
         if scent_data.get('notes'):
             extracted = ExtractedScent(
@@ -47,10 +52,10 @@ def process_music_task(user_id: str, memory_id: str, artist: str, track: str, sp
         }
         
         
-        result = r.publish("memory_events", json.dumps(message))
+        song_result = r.publish("memory_events", json.dumps(message))
         
         
-        if result == 0:
+        if song_result == 0:
             print("No subscribers listening to memory_events!")
 
         r.close()
