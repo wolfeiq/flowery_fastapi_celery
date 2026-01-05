@@ -8,6 +8,12 @@ from ..services.vector_db import store_embedding
 from ..services.scent_extractor import extract_scents
 from ..services.vision_ai import analyze_image
 from ..services.pdf_extractor import extract_text_from_pdf
+from ..websocket import manager
+import asyncio
+import redis
+import json
+import redis
+from app.core.config import settings
 
 #Celery needed for this:
 #embedding
@@ -18,7 +24,7 @@ from ..services.pdf_extractor import extract_text_from_pdf
 
 
 @celery_app.task
-def process_memory_task(memory_id: str):
+def process_memory_task(memory_id: str, user_id: str):
     print(f"Processing memory_id: {memory_id}")  
     db = SessionLocal()
     try:
@@ -34,6 +40,27 @@ def process_memory_task(memory_id: str):
         
         memory.processed = True
         db.commit()
+
+        
+        r = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        
+        message = {
+            "user_id": user_id,
+            "event": "memory_processed",
+            "memory_id": memory_id,
+        }
+        
+        
+        result = r.publish("memory_events", json.dumps(message))
+        
+        
+        if result == 0:
+            print("No subscribers listening to memory_events!")
+
+        r.close()
+
+       
+
         return {"status": "processed"}
     finally:
         db.close()

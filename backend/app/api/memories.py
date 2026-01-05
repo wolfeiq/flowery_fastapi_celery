@@ -12,7 +12,7 @@ from ..core.validation import validate_email, validate_password, sanitize_text, 
 from pathlib import Path
 import shutil
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 ALLOWED_MIME_TYPES = {
     "image/jpeg",
@@ -101,7 +101,7 @@ async def upload_memory(
 
     db.commit()
 
-    process_memory_task.delay(str(memory.id))
+    process_memory_task.delay(str(memory.id), str(current_user.id))
 
     return {
         "id": str(memory.id),

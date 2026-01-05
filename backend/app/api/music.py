@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import uuid
+from ..tasks.proccess_music import process_music_task
 
 from ..database import get_db
 from ..models import User, ScentMemory, SpotifyLink, ExtractedScent
@@ -15,7 +16,7 @@ class MusicLinkRequest(BaseModel):
     memory_id: uuid.UUID
     artist_name: str
     track_name: str
-    spotify_url: str = None  # Optional
+    spotify_url: str = None
 
 @router.post("/link")
 async def link_song(
@@ -23,58 +24,29 @@ async def link_song(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
- 
-    
+
     memory = db.query(ScentMemory).filter(
         ScentMemory.id == request.memory_id,
         ScentMemory.user_id == current_user.id
     ).first()
     if not memory:
         raise HTTPException(404, "Memory not found")
-    
+ 
     artist_name = sanitize_text(request.artist_name, max_length=255)
     track_name = sanitize_text(request.track_name, max_length=255)
     spotify_url = sanitize_text(request.spotify_url, max_length=500) if request.spotify_url else None
-    
-   
-    try:
-        result = search_and_analyze_song(artist_name, track_name, spotify_url)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    except Exception as e:
-        raise HTTPException(500, f"Failed to analyze song: {str(e)}")
-    
-    link = SpotifyLink(
-        memory_id=memory.id,
-        track_name=result['track_name'],
-        artist_name=result['artist_name'],
-        spotify_url=result.get('spotify_url'),
-        album_art=result.get('album_art'),
-        lyrics=result['lyrics'],
-        lyrics_analysis=result['analysis']
+
+    process_music_task.delay(
+        str(current_user.id),
+        str(request.memory_id),
+        artist_name,
+        track_name,
+        spotify_url,
     )
-    db.add(link)
-    
-    scent_data = result['analysis'].get('scent_associations', {})
-    if scent_data.get('notes'):
-        extracted = ExtractedScent(
-            memory_id=memory.id,
-            notes=scent_data.get('notes', []),
-            description=f"From song '{result['track_name']}' by {result['artist_name']}: {scent_data.get('description', '')}",
-            confidence=0.75,
-            source='audio',
-            extraction_method='lyrics_analysis'
-        )
-        db.add(extracted)
-    
-    db.commit()
-    db.refresh(link)
     
     return {
-        "link_id": str(link.id),
-        "track": f"{result['track_name']} by {result['artist_name']}",
-        "analysis": result['analysis'],
-        "album_art": result.get('album_art')
+        "status": "processing",
+        "message": "Song analysis started"
     }
 
 @router.get("/memory/{memory_id}")
@@ -145,3 +117,8 @@ def unlink_song(
     db.delete(link)
     db.commit()
     return {"status": "unlinked"}
+
+
+
+
+

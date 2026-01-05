@@ -11,7 +11,7 @@ celery_app.conf.update(task_serializer='json', accept_content=['json'], result_s
 #redis-server
 #redis-cli ping
 #celery -A app.tasks.celery_app worker --loglevel=info from backend
-
+#uvicorn app.main:app --reload
 
 #Celery for tasks that are:
 #slow
