@@ -1,4 +1,3 @@
-# websockets/redis_listener.py
 import asyncio
 import json
 import redis.asyncio as redis
