@@ -41,8 +41,12 @@ build in public @portable_writer on X
 - Integrate a vector database (ChromaDB) ✅
 - Connect LLM providers (OpenAI) ✅
 - Automate fine-tuning and deployment ✅
-- Frontend
-- DevOps with Kubernetes
+- Frontend Design ✅
+- Frontend Websockets ✅
+- Frontend -> Graph Visuals with Three.js
+- Load Caching
+- Limit to One Memory Upload/Day
+- DevOps with Kubernetes + Docker
 
 Basically:
 
@@ -58,15 +62,15 @@ Basically:
 
 ## Security
 
-✅ Input sanitization (HTML/XSS prevention)
-✅ Rate limiting (60 req/min)
-✅ CORS restrictions
-✅ Security headers
-✅ Admin-only endpoints for Fine-Tuning based on Past Queries with High Ratings
-✅ Strong password requirements
-✅ SQLAlchemy prevents SQL injection
-✅ JWT token expiration
-✅ Environment-based config
+- ✅ Input sanitization (HTML/XSS prevention)
+- ✅ Rate limiting (60 req/min)
+- ✅ CORS restrictions
+- ✅ Security headers
+- ✅ Admin-only endpoints for Fine-Tuning based on Past Queries with High Ratings
+- ✅ Password requirements
+- ✅ SQLAlchemy prevents SQL injection
+- ✅ JWT token expiration
+- ✅ Environment-based config
 
 ## Model Logic
 
@@ -90,3 +94,6 @@ erDiagram
     Fragrance }o--o{ Note : "contains"
     
     FineTuningJob ||--o{ TrainingExample : "uses"
+
+
+![Login Screen](assets/screenshot.png)
