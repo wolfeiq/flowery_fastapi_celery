@@ -1,11 +1,13 @@
 import pdfplumber
-from pathlib import Path
+from io import BytesIO
 
-def extract_text_from_pdf(pdf_path: str) -> str:
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     text_content = []
     
     try:
-        with pdfplumber.open(pdf_path) as pdf:
+        pdf_file = BytesIO(pdf_bytes)
+        
+        with pdfplumber.open(pdf_file) as pdf:
             for page_num, page in enumerate(pdf.pages, 1):
                 text = page.extract_text()
                 if text:

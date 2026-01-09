@@ -1,3 +1,4 @@
+from venv import logger
 from .celery_app import celery_app
 from ..database import SessionLocal
 from ..models import ScentMemory, MemoryChunk, ImageAnalysis, ExtractedScent, ExtractedScent, ScentProfile
@@ -9,11 +10,15 @@ from ..services.scent_extractor import extract_scents
 from ..services.vision_ai import analyze_image
 from ..services.pdf_extractor import extract_text_from_pdf
 from ..websocket import manager
+from app.services.summarization import generate_summary
 import asyncio
 import redis
 import json
 import redis
 from app.core.config import settings
+import os
+import base64
+from app.services.cache import invalidate_user_recommendations
 
 #Celery needed for this:
 #embedding
@@ -23,25 +28,62 @@ from app.core.config import settings
 #Spotify enrichment
 
 
-@celery_app.task
-def process_memory_task(memory_id: str, user_id: str):
-    print(f"Processing memory_id: {memory_id}")  
-    db = SessionLocal()
-    try:
-        memory = db.query(ScentMemory).filter(ScentMemory.id == memory_id).first()
-        if not memory:
-            return {"error": "Memory not found"}
-        if memory.memory_type.value == "photo":
-            process_image(memory_id, db)
-        elif memory.memory_type.value == "pdf":
-            process_pdf(memory_id, db)
-        else:
-            process_text(memory_id, db)
-        
-        memory.processed = True
-        db.commit()
+#with cache invalidation
 
+@celery_app.task
+def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
+    db = SessionLocal()
+    
+    try:
+        memory = db.query(ScentMemory).get(memory_id)
         
+        if not memory:
+            raise ValueError(f"Memory {memory_id} not found")
+        
+        if file_data:
+            if file_data["type"] == "base64":
+                file_bytes = base64.b64decode(file_data["data"])
+            elif file_data["type"] == "temp_file":
+                with open(file_data["path"], "rb") as f:
+                    file_bytes = f.read()
+                os.remove(file_data["path"])
+            
+            if file_data["content_type"].startswith("image"):
+                vision_result = analyze_image(file_bytes)
+                
+                analysis = ImageAnalysis(
+                    memory_id=memory_id,
+                    detected_objects=vision_result.get('detected_objects', []),
+                    dominant_colors=vision_result.get('dominant_colors', []),
+                    mood=vision_result.get('mood'),
+                    setting=vision_result.get('setting'),
+                    confidence_score=0.9,
+                    model_used='gpt-4-turbo',
+                    raw_response=vision_result
+                )
+                
+                db.add(analysis)
+                
+                enhanced_content = f"{memory.content}\n\nImage analysis: {vision_result.get('mood')} mood, objects: {', '.join(vision_result.get('detected_objects', []))}"
+                memory.content = enhanced_content
+            
+            elif file_data["content_type"] == "application/pdf":
+                print(f"Processing PDF for memory {memory_id}")
+                
+                extracted_text = extract_text_from_pdf(file_bytes)
+                print(f"Extracted {len(extracted_text)} characters from PDF")
+                
+                if extracted_text:
+                    memory.content = f"{memory.content}\n\nPDF Content:\n{extracted_text}"
+                else:
+                    memory.content = f"{memory.content}\n\n[PDF extraction failed]"
+        
+        process_text(memory, db)
+        
+        db.commit()
+        invalidate_user_recommendations(user_id)
+        logger.info(f"Successfully processed memory {memory_id} and invalidated cache")
+
         r = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
         
         message = {
@@ -50,34 +92,42 @@ def process_memory_task(memory_id: str, user_id: str):
             "memory_id": memory_id,
         }
         
-        
         result = r.publish("memory_events", json.dumps(message))
-        
-        
+    
         if result == 0:
             print("No subscribers listening to memory_events!")
 
         r.close()
-
-       
-
-        return {"status": "processed"}
+        print(f"Successfully processed memory {memory_id}")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Task failed for memory {memory_id}", exc_info=True)
+        if file_data and file_data["type"] == "temp_file":
+            if os.path.exists(file_data["path"]):
+                os.remove(file_data["path"])
+        raise
     finally:
         db.close()
-
-def process_text(memory_id: str, db):
-    print(f"process_text called for {memory_id}")
-    memory = db.query(ScentMemory).get(memory_id)
-    print(f"Memory found: {memory is not None}, content length: {len(memory.content) if memory else 0}")
     
+
+
+def process_text(memory: ScentMemory, db):
+
+    print(f"process_text called for {memory.id}")
+    print(f"Content length: {len(memory.content)}")
+
+    summary = generate_summary(memory.content, user_context=memory.title)
+    memory.summary = summary
+    print(f"Generated summary: {summary[:100]}...")
     
     scent_data = extract_scents(memory.content)
     print(f"Extracted scents: {scent_data}")
-    
 
     if scent_data.get('notes') or scent_data.get('scent_name'):
+
         extracted = ExtractedScent(
-            memory_id=memory_id,
+            memory_id=memory.id,
             scent_name=scent_data.get('scent_name'),
             brand=scent_data.get('brand'),
             notes=scent_data.get('notes', []),
@@ -92,70 +142,28 @@ def process_text(memory_id: str, db):
     
     update_scent_profile(memory.user_id, scent_data, db)
     
-    
     chunks = [memory.content[i:i+500] for i in range(0, len(memory.content), 450)]
     print(f"Created {len(chunks)} chunks")
 
     for idx, chunk_text in enumerate(chunks):
         embedding = generate_embedding(chunk_text)
         chunk = MemoryChunk(
-            memory_id=memory_id,
+            memory_id=memory.id,
             content=chunk_text,
             chunk_index=idx
         )
         db.add(chunk)
         db.flush()
-        print(f"here 0")
         
         store_embedding(
             chunk_id=str(chunk.id),
             embedding=embedding,
-            metadata={"user_id": str(memory.user_id), "memory_id": str(memory_id)}
+            metadata={"user_id": str(memory.user_id), "memory_id": str(memory.id)}
         )
-        print(f"here 00000")
+        
         chunk.vector_id = str(chunk.id)
-    print(f"here 4")
-    db.commit()
-
-def process_image(memory_id: str, db):
-    memory = db.query(ScentMemory).get(memory_id)
     
-    vision_data = analyze_image(memory.file_path)
-    print(f"Vision analysis: {vision_data}")
-    
-    analysis = ImageAnalysis(
-        memory_id=memory_id,
-        detected_objects=vision_data.get('detected_objects', []),
-        dominant_colors=vision_data.get('dominant_colors', []),
-        mood=vision_data.get('mood'),
-        setting=vision_data.get('setting'),
-        confidence_score=0.9,
-        model_used='gpt-4-turbo',
-        raw_response=vision_data
-    )
-    db.add(analysis)
-    
-    enhanced_content = f"{memory.content}\n\nImage analysis: {vision_data.get('mood')} mood, objects: {', '.join(vision_data.get('detected_objects', []))}"
-    memory.content = enhanced_content
-    
-
-    process_text(memory_id, db)
-    
-
-def process_pdf(memory_id: str, db):
-    memory = db.query(ScentMemory).get(memory_id)
-    print(f"Processing PDF: {memory.file_path}")
-
-    extracted_text = extract_text_from_pdf(memory.file_path)
-    print(f"Extracted {len(extracted_text)} characters from PDF")
-    
-    if extracted_text:
-        memory.content = f"{memory.content}\n\nPDF Content:\n{extracted_text}"
-    else:
-        memory.content = f"{memory.content}\n\n[PDF extraction failed]"
-    
-    process_text(memory_id, db)
-
+    print(f"Completed processing for memory {memory.id}")
 
 
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import auth, memories, query, spotify
+from .api import auth, memories, query, spotify, rate_limits
 from .api import profile
 from .api import fine_tuning
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -11,6 +11,8 @@ from .middleware.logging_middleware import log_requests
 from .api import auth, memories, query, profile, fine_tuning, music
 import asyncio
 from .websockets.redis_listener import redis_listener
+from .api.endpoints import health
+
 #from fastapi import WebSocket, WebSocketDisconnect
 #from .websocket import manager
 from .websockets.routes import router as websocket_router
@@ -18,6 +20,27 @@ from .websockets.routes import router as websocket_router
 
 #Will deploy with nginx + SSL certificate -> with Docker
 
+
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+
+if settings.ENVIRONMENT == "production" and settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+            RedisIntegration(),
+            CeleryIntegration()
+        ],
+        traces_sample_rate=0.1,  # 10% of requests for performance monitoring
+        profiles_sample_rate=0.1,
+        send_default_pii=False  # Don't send user data
+    )
 logger = setup_logging()
 
 #sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -68,10 +91,12 @@ async def start_redis_listener():
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
-app.include_router(spotify.router, prefix="/api/spotify", tags=["spotify"])
+#app.include_router(spotify.router, prefix="/api/spotify", tags=["spotify"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
-app.include_router(fine_tuning.router, prefix="/api/fine-tuning", tags=["fine-tuning"])
-app.include_router(music.router, prefix="/api/v1/music", tags=["music"])
+app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
+app.include_router(health.router, prefix="/api", tags=["health"])
+#app.include_router(fine_tuning.router, prefix="/api/fine-tuning", tags=["fine-tuning"])
+#app.include_router(music.router, prefix="/api/v1/music", tags=["music"])
 app.include_router(websocket_router)
 
 #app.mount("/ws", socket_app)

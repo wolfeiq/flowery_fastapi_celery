@@ -6,21 +6,20 @@ import uuid
 from ..database import Base
 
 class SpotifyLink(Base):
+    #for songs that enhance memories
     __tablename__ = "spotify_links"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     memory_id = Column(UUID(as_uuid=True), ForeignKey("scent_memories.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # Song data
     track_name = Column(String(255), nullable=False)
     artist_name = Column(String(255), nullable=False)
     spotify_url = Column(String(500))
-    album_art = Column(String(500))
     
-    # Lyrics data
-    lyrics = Column(Text)
+    #lyrics = Column(Text)
     lyrics_analysis = Column(JSON)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     memory = relationship("ScentMemory", back_populates="spotify_links")
+

@@ -9,10 +9,10 @@ from ..database import get_db
 from ..models import User, ScentMemory, MemoryType
 from .auth import get_current_user
 from ..core.validation import validate_email, validate_password, sanitize_text, validate_uuid
-from pathlib import Path
-import shutil
+import base64
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
+BASE64_SIZE_LIMIT = 5 * 1024 * 1024
 
 ALLOWED_MIME_TYPES = {
     "image/jpeg",
@@ -31,8 +31,8 @@ ALLOWED_EXTENSIONS = {
 
 router = APIRouter()
 
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+#UPLOAD_DIR = Path("uploads")
+#UPLOAD_DIR.mkdir(exist_ok=True)
 
 @router.post("/upload")
 async def upload_memory(
@@ -71,6 +71,9 @@ async def upload_memory(
     db.add(memory)
     db.flush()
 
+    file_data = None
+    temp_file_path = None
+
     if file:
         file.file.seek(0, 2)
         file_size = file.file.tell()
@@ -86,27 +89,51 @@ async def upload_memory(
             or ext not in ALLOWED_EXTENSIONS
         ):
             raise HTTPException(400, "Unsupported file type")
+        
+        file_bytes = await file.read()
 
-        user_dir = UPLOAD_DIR / str(current_user.id)
-        user_dir.mkdir(parents=True, exist_ok=True)
+        if file_size < BASE64_SIZE_LIMIT:
+            base64_encoded = base64.b64encode(file_bytes).decode('utf-8')
+            file_data = {
+                "type": "base64",
+                "data": base64_encoded,
+                "content_type": file.content_type,
+                "extension": ext
+            }
 
-        file_path = user_dir / f"{memory.id}{ext}"
-
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        memory.file_path = str(file_path)
-        memory.file_size = file_path.stat().st_size
+        else:
+            temp_dir = Path("/tmp/scent_uploads")
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            
+            temp_filename = f"{uuid.uuid4()}{ext}"
+            temp_file_path = temp_dir / temp_filename
+            
+            with temp_file_path.open("wb") as f:
+                f.write(file_bytes)
+            
+            file_data = {
+                "type": "temp_file",
+                "path": str(temp_file_path),
+                "content_type": file.content_type,
+                "extension": ext
+            }
+        
+        memory.file_size = file_size
         memory.mime_type = file.content_type
 
     db.commit()
 
-    process_memory_task.delay(str(memory.id), str(current_user.id))
+
+    process_memory_task.delay(
+        str(memory.id), 
+        str(current_user.id),
+        file_data
+    )
 
     return {
         "id": str(memory.id),
         "title": title,
-        "status": "uploaded"
+        "status": "processing"
     }
 
 @router.get("/")

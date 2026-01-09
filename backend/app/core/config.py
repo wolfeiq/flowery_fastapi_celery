@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     GENIUS_ACCESS_TOKEN: str = ""
 
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    RATE_LIMIT_PER_MINUTE: int = 100 
+    UPLOAD_LIMIT_PER_DAY: int = 3
+    QUERY_LIMIT_PER_DAY: int = 10
+    PROFILE_UPDATE_LIMIT_PER_DAY: int = 1
+
     @property
     def admin_email_list(self) -> list[str]:
         return [e.strip() for e in self.ADMIN_EMAILS.split(",") if e.strip()]

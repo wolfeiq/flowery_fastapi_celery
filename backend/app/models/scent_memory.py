@@ -11,10 +11,10 @@ class MemoryType(str, Enum):
     TEXT = "text"
     PHOTO = "photo"
     PDF = "pdf"
+    SONG = "song"
 
 
-class ScentMemory(Base):
-    
+class ScentMemory(Base): 
     __tablename__ = "scent_memories"
    
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -22,6 +22,7 @@ class ScentMemory(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),  nullable=False, index=True)
     title = Column(String(255), nullable=False)
     content = Column(Text)
+    summary = Column(String(500))
     memory_type = Column(SQLEnum(MemoryType, name="memory_type_enum"), nullable=False, index=True)
     occasion = Column(String(100)) 
     emotion = Column(String(100))  
@@ -41,7 +42,7 @@ class ScentMemory(Base):
     chunks = relationship("MemoryChunk", back_populates="memory", cascade="all, delete-orphan", lazy="select")
     image_analysis = relationship("ImageAnalysis", back_populates="memory", uselist=False,cascade="all, delete-orphan")
     extracted_scents = relationship("ExtractedScent", back_populates="memory", cascade="all, delete-orphan")
-    spotify_links = relationship("SpotifyLink", back_populates="memory", cascade="all, delete-orphan")
-    spotify_links = relationship("SpotifyLink", back_populates="memory", cascade="all, delete-orphan")
+    #spotify_links = relationship("SpotifyLink", back_populates="memory", cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<ScentMemory(id={self.id}, title='{self.title}', type={self.memory_type})>"
