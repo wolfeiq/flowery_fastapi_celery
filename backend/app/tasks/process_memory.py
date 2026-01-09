@@ -140,7 +140,7 @@ def process_text(memory: ScentMemory, db):
         db.flush()
         print(f"Created ExtractedScent: {extracted.id}")
     
-    update_scent_profile(memory.user_id, scent_data, db)
+    update_scent_profile(memory.user_id, scent_data, memory, db)
     
     chunks = [memory.content[i:i+500] for i in range(0, len(memory.content), 450)]
     print(f"Created {len(chunks)} chunks")
@@ -167,17 +167,21 @@ def process_text(memory: ScentMemory, db):
 
 
 
-def update_scent_profile(user_id, scent_data: dict, db):
-    print(f"update_scent_profile called for user {user_id}")
-    print(f"scent_data: {scent_data}")
+def update_scent_profile(user_id, scent_data: dict, memory: ScentMemory, db):
     profile = db.query(ScentProfile).filter_by(user_id=user_id).first()
-    print(f"Profile found: {profile is not None}")
     
     if not profile:
-        profile = ScentProfile(user_id=user_id, preferred_families=[], disliked_notes=[])
+        profile = ScentProfile(
+            user_id=user_id, 
+            preferred_families=[], 
+            disliked_notes=[],
+            emotional_preferences=[],
+            top_notes=[],
+            heart_notes=[],
+            base_notes=[]
+        )
         db.add(profile)
         db.flush()
-        print(f"created new")
     
     notes = scent_data.get('notes', [])
     for note in notes:
@@ -188,7 +192,26 @@ def update_scent_profile(user_id, scent_data: dict, db):
     if family and family not in profile.preferred_families:
         profile.preferred_families.append(family)
 
+    if memory.emotion and memory.emotion not in profile.emotional_preferences:
+        profile.emotional_preferences.append(memory.emotion)
+    
+    for note in scent_data.get('top_notes', []):
+        if note and note not in profile.top_notes:
+            profile.top_notes.append(note)
+    
+    for note in scent_data.get('heart_notes', []):
+        if note and note not in profile.heart_notes:
+            profile.heart_notes.append(note)
+    
+    for note in scent_data.get('base_notes', []):
+        if note and note not in profile.base_notes:
+            profile.base_notes.append(note)
+    
     flag_modified(profile, 'preferred_families')
+    flag_modified(profile, 'emotional_preferences')
+    flag_modified(profile, 'top_notes')
+    flag_modified(profile, 'heart_notes')
+    flag_modified(profile, 'base_notes')
     
     profile.total_memories += 1
     

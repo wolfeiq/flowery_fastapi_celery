@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 import uuid
 from ..database import Base
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class ScentProfile(Base):
@@ -11,9 +12,13 @@ class ScentProfile(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    preferred_families = Column(ARRAY(String), default=list)  
+    preferred_families = Column(ARRAY(String), default=list) 
+    top_notes: Mapped[list] = mapped_column(ARRAY(String), default=list)
+    heart_notes: Mapped[list] = mapped_column(ARRAY(String), default=list)
+    base_notes: Mapped[list] = mapped_column(ARRAY(String), default=list) 
     disliked_notes = Column(ARRAY(String), default=list)      
-    intensity_preference = Column(String(50))                 
+    intensity_preference = Column(String(50))        
+    emotional_preferences: Mapped[list] = mapped_column(ARRAY(String))          
     budget_range = Column(String(50))                         
     total_memories = Column(Integer, default=0)
     total_queries = Column(Integer, default=0)

@@ -12,20 +12,21 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 #cache-friendly for ChatGPT
 
-SCENT_EXTRACTION_PROMPT = """You are an expert perfumer and fragrance analyst.
-
-Extract scent-related information from text:
+SCENT_EXTRACTION_PROMPT = """Extract scent information from text:
 - Scent/perfume names
 - Brands
-- Fragrance notes (top/middle/base)
-- Fragrance families (floral, woody, citrus, etc.)
+- Fragrance notes categorized by layer (top/heart/base)
+- Fragrance families
 - Descriptions
 
-Return ONLY valid JSON with these fields:
+Return only valid JSON:
 {
   "scent_name": "string or null",
   "brand": "string or null",
-  "notes": ["array", "of", "notes"],
+  "notes": ["all", "notes"],
+  "top_notes": ["citrus", "bergamot"],
+  "heart_notes": ["rose", "jasmine"],
+  "base_notes": ["vanilla", "musk"],
   "fragrance_family": "string or null",
   "description": "string or null"
 }
