@@ -27,6 +27,7 @@ build in public @portable_writer on X
    - Chunking
    - Embedding
    - Scent extraction with OpenAI
+   - (got rid of music bc not sure of legal stuff)
 4. User submits a query
 5. Relevant chunks and profile data are retrieved
 6. LLM generates recommendations
@@ -44,8 +45,9 @@ build in public @portable_writer on X
 - Frontend Design ✅
 - Frontend Websockets ✅
 - Frontend -> Graph Visuals with Three.js
-- Load Caching
-- Limit to One Memory Upload/Day
+- Load Caching ✅
+- Limit to Three Memories Upload/Day ✅
+- Processing of images and pdfs happens in transit ✅
 - DevOps with Kubernetes + Docker
 
 Basically:
