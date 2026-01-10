@@ -16,7 +16,7 @@ class SpotifyLink(Base):
     artist_name = Column(String(255), nullable=False)
     spotify_url = Column(String(500))
     
-    #lyrics = Column(Text)
+    lyrics = Column(Text)
     lyrics_analysis = Column(JSON)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

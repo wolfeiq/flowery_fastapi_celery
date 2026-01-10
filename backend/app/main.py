@@ -8,10 +8,10 @@ from .middleware.rate_limit import rate_limit_middleware
 from .core.config import settings
 from .core.logging_config import setup_logging
 from .middleware.logging_middleware import log_requests
-from .api import auth, memories, query, profile, fine_tuning, music
+from .api import auth, memories, query, profile, fine_tuning, music, health
 import asyncio
 from .websockets.redis_listener import redis_listener
-from .api.endpoints import health
+
 
 #from fastapi import WebSocket, WebSocketDisconnect
 #from .websocket import manager

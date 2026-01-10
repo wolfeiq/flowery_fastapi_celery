@@ -1,7 +1,7 @@
 from venv import logger
 from .celery_app import celery_app
 from ..database import SessionLocal
-from ..models import ScentMemory, MemoryChunk, ImageAnalysis, ExtractedScent, ExtractedScent, ScentProfile
+from ..models import ScentMemory, MemoryChunk, ImageAnalysis, ExtractedScent, SpotifyLink, ScentProfile
 import time
 from ..services.embeddings import generate_embedding
 from sqlalchemy.orm.attributes import flag_modified
@@ -79,6 +79,7 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
                     memory.content = f"{memory.content}\n\n[PDF extraction failed]"
         
         process_text(memory, db)
+        memory.processed = True
         
         db.commit()
         invalidate_user_recommendations(user_id)
@@ -106,6 +107,30 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
         if file_data and file_data["type"] == "temp_file":
             if os.path.exists(file_data["path"]):
                 os.remove(file_data["path"])
+
+
+        try:
+            memory = db.query(ScentMemory).get(memory_id)
+            if memory:
+                memory.processed = False 
+                memory.processing_error = str(e)[:500]
+                db.commit()
+        except:
+            pass
+        r = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        
+        message = {
+            "user_id": user_id,
+            "event": "memory_failed",
+            "memory_id": memory_id,
+        }
+        
+        result = r.publish("memory_events", json.dumps(message))
+    
+        if result == 0:
+            print("No subscribers listening to memory_events!")
+
+        r.close()
         raise
     finally:
         db.close()

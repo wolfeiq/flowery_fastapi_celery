@@ -151,7 +151,7 @@ Please provide personalized perfume recommendations based on their profile."""
     
     usage = response.usage
     if hasattr(usage, 'prompt_tokens_details'):
-        cached_tokens = usage.prompt_tokens_details.get('cached_tokens', 0)
+        cached_tokens = getattr(usage.prompt_tokens_details, 'cached_tokens', 0)
         if cached_tokens > 0:
             logger.info(f"OpenAI prompt cache hit: {cached_tokens} tokens cached")
 

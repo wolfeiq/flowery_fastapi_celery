@@ -47,7 +47,7 @@ Content to summarize:
         logger.error(f"Summary generation failed: {e}", exc_info=True)
         
         fallback = content[:200].strip()
-        if len(content) > 200:  # Fixed syntax error
+        if len(content) > 200: 
             last_period = fallback.rfind('.')
             if last_period > 100:
                 fallback = fallback[:last_period + 1]
