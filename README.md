@@ -98,5 +98,4 @@ erDiagram
     FineTuningJob ||--o{ TrainingExample : "uses"
 
 
-![Login Screen](assets/screenshot.pngecommend perfumes"}'
-done
+![Login Screen](assets/screenshot.png)
