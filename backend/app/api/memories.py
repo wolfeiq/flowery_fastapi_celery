@@ -37,7 +37,7 @@ router = APIRouter()
 @router.post("/upload")
 async def upload_memory(
     title: str = Form(...),
-    content: str = Form(...),
+    content: str = Form(...), #description
     occasion: str = Form(None),
     emotion: str = Form(None),
     file: UploadFile = File(None),
@@ -150,7 +150,10 @@ def list_memories(
             "id": str(m.id),
             "title": m.title,
             "occasion": m.occasion,
+            "content": m.content,
             "memory_type": m.memory_type,
+            "extracted_scents": m.extracted_scents,
+            "emotion": m.emotion,
             "processed": m.processed,
             "created_at": m.created_at
         }
@@ -179,6 +182,7 @@ def get_memory(
         "title": memory.title,
         "content": memory.content,
         "occasion": memory.occasion,
+        "extracted_scents": memory.extracted_scents,
         "emotion": memory.emotion,
         "processed": memory.processed,
         "chunks_count": len(memory.chunks)

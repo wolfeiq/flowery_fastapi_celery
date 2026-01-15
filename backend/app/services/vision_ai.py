@@ -10,49 +10,67 @@ logger = logging.getLogger(__name__)
 
 VISION_SYSTEM_PROMPT = """You are an expert at analyzing images for scent-related context.
 
-Your task is to carefully examine images and identify:
-1. Objects that suggest scents (beach, ocean, furniture, flowers, food, environments)
-2. Dominant colors and their emotional associations
-3. The overall mood and setting
-4. Potential scent suggestions based on the visual context
+Your task is to carefully examine images and create a:
+1. Description of the image setting, vibe, explicitly mentioning objects that suggest scents (for example: beach, ocean, furniture, flowers, food, environments)
+2. Dominant color and its emotional association 
+3. Potential top, heart and base fragrace note you'd associate with the visual context (if absolutely no context exists, generate at least one note at any one suitable layer based on common pleasant scents. otherwise, generate more)
+4. One potential fragrance family suggestion based on the context
+5. If visual context permits, a brand and scent name visible in the image
 
-Be specific and detailed in your analysis. Focus on sensory details that would translate to fragrance notes.
+Take into account the emotion: "{emotion}" and occasion: "{occasion}" the user has submitted alongside the image, if present.
+
+Be specific and detailed in your analysis. Focus on sensory details that would translate to fragrance notes. Be creative with the fragrance notes.
+
+Be creative with the color and suggest shades rather than primary colors. 
+
+No longer than two sentences, description (i.e. the image_description field) should always include the identified top, base or heart notes, color and emotion. Tie it into the description of the image.
 
 Always return your analysis in valid JSON format with these exact fields:
-- detected_objects: array of strings
-- dominant_colors: array of hex color codes
-- mood: string (romantic/fresh/elegant/energetic/cozy/mysterious)
-- colors_associated_with_mood: string
-- setting: string (indoor/outdoor/studio/nature/urban)
-- scent_suggestions: array of strings
+- image_description: string
+- brand: string
+- scent_name: string
+- top_notes: List[str]
+- heart_notes: List[str]
+- base_notes: List[str]
+- color: str
+- emotion: string
+- scent_family: str
 
 Example response:
 {
-  "detected_objects": ["perfume bottle", "roses", "vintage vanity"],
-  "dominant_colors": ["#FFB6C1", "#8B4513", "#F5F5DC"],
-  "mood": "romantic",
-  "colors_associated_with_mood": "pink, brown, cream",
-  "setting": "indoor",
-  "scent_suggestions": ["floral", "powdery", "vintage"]
+  "image_description": "A luxurious living room sofa with gold accents against a dark background of a wall with an antique painting",
+  "brand": "Dior",
+  "scent_name": "Sauvage",
+  "top_notes": ["bergamot", "pepper", "citrus"],
+  "heart_notes": ["lavender", "geranium", "patchouli"],
+  "base_notes": ["ambroxan", "cedar", "labdanum"],
+  "color": "#2C3E50",
+  "emotion": "confident",
+  "scent_family": "woody aromatic"
 }"""
 
-def analyze_image(image_bytes: bytes) -> dict:
+def analyze_image(image_bytes: bytes, content: str, emotion: str, occasion: str) -> dict:
     logger.info("Vision API call started")
     base64_image = base64.b64encode(image_bytes).decode('utf-8')
        #processed in transit, images never stored in S3 buckets, no file I/O
+
+    formatted_prompt = VISION_SYSTEM_PROMPT.format(
+        emotion=emotion or "not specified",
+        occasion=occasion or "not specified"
+    )
     response = client.chat.completions.create(
         model="gpt-4-turbo",
         messages=[
             {
                 "role": "system",
-                "content": VISION_SYSTEM_PROMPT
+                "content": formatted_prompt
             },
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "Please analyze this image:"
+                        "text": "Analyze this image:"
                     },
                     {
                         "type": "image_url",
@@ -61,6 +79,7 @@ def analyze_image(image_bytes: bytes) -> dict:
                 ]
             }
         ],
+
         response_format={"type": "json_object"}
     )
     

@@ -241,7 +241,10 @@ def submit_feedback(
         ).first()
 
         if profile:
-            existing = set(profile.disliked_notes or [])
+            if profile.disliked_notes is None:
+                profile.disliked_notes = []
+    
+            existing = set(profile.disliked_notes)
             for note in feedback.disliked_notes:
                 if note not in existing:
                     profile.disliked_notes.append(note)

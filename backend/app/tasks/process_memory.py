@@ -49,38 +49,32 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
                 os.remove(file_data["path"])
             
             if file_data["content_type"].startswith("image"):
-                vision_result = analyze_image(file_bytes)
+                original_content = memory.content
+                description = process_image(memory, db, file_bytes)
+                memory.content = f"{original_content}\n\n{description}"
                 
-                analysis = ImageAnalysis(
-                    memory_id=memory_id,
-                    detected_objects=vision_result.get('detected_objects', []),
-                    dominant_colors=vision_result.get('dominant_colors', []),
-                    mood=vision_result.get('mood'),
-                    setting=vision_result.get('setting'),
-                    confidence_score=0.9,
-                    model_used='gpt-4-turbo',
-                    raw_response=vision_result
-                )
-                
-                db.add(analysis)
-                
-                enhanced_content = f"{memory.content}\n\nImage analysis: {vision_result.get('mood')} mood, objects: {', '.join(vision_result.get('detected_objects', []))}"
-                memory.content = enhanced_content
             
             elif file_data["content_type"] == "application/pdf":
                 print(f"Processing PDF for memory {memory_id}")
                 
                 extracted_text = extract_text_from_pdf(file_bytes)
                 print(f"Extracted {len(extracted_text)} characters from PDF")
-                
+                original_content = memory.content
                 if extracted_text:
-                    memory.content = f"{memory.content}\n\nPDF Content:\n{extracted_text}"
+                    memory.content = f"{memory.content}\n\nAttached PDF Content:\n{extracted_text}"         
                 else:
                     memory.content = f"{memory.content}\n\n[PDF extraction failed]"
+
+                description = process_text(memory, db)
+                memory.content = f"{original_content}\n\n{description}"
         
-        process_text(memory, db)
+        else: 
+            original_content = memory.content
+            description = process_text(memory, db)
+            memory.content = f"{original_content}\n\n{description}"
+            
+
         memory.processed = True
-        
         db.commit()
         invalidate_user_recommendations(user_id)
         logger.info(f"Successfully processed memory {memory_id} and invalidated cache")
@@ -135,39 +129,38 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
     finally:
         db.close()
     
+def process_image(memory: ScentMemory, db, file_bytes) -> str:
+
+    vision_result = analyze_image(file_bytes, memory.content, memory.emotion, memory.occasion)
+
+    extracted = ExtractedScent(
+        memory_id=memory.id,
+        scent_name=vision_result.get('scent_name'),
+        brand=vision_result.get('brand'),
+        top_notes=vision_result.get('top_notes', []),
+        heart_notes=vision_result.get('heart_notes', []),
+        base_notes=vision_result.get('base_notes', []),
+        description=vision_result.get('image_description'), #should include the colors, emotion, and fragrance notes
+        emotion=vision_result.get('emotion'),
+        scent_family=vision_result.get('scent_family'),
+        color=vision_result.get('color'),
+        confidence=0.85,
+        source='image',
+        extraction_method='llm'
+    )
+        
+    db.add(extracted)
+    db.flush()  
+    enhanced_content = f"{memory.content}\n\nAttached image description: {vision_result.get('image_description')}"
 
 
-def process_text(memory: ScentMemory, db):
-
+    print(f"Created ExtractedScent: {extracted.id}")
     print(f"process_text called for {memory.id}")
-    print(f"Content length: {len(memory.content)}")
+    print(f"Content length: {len(enhanced_content)}")
 
-    summary = generate_summary(memory.content, user_context=memory.title)
-    memory.summary = summary
-    print(f"Generated summary: {summary[:100]}...")
+    update_scent_profile(memory.user_id, vision_result, memory, db)
     
-    scent_data = extract_scents(memory.content)
-    print(f"Extracted scents: {scent_data}")
-
-    if scent_data.get('notes') or scent_data.get('scent_name'):
-
-        extracted = ExtractedScent(
-            memory_id=memory.id,
-            scent_name=scent_data.get('scent_name'),
-            brand=scent_data.get('brand'),
-            notes=scent_data.get('notes', []),
-            description=scent_data.get('description'),
-            confidence=0.85,
-            source='text',
-            extraction_method='llm'
-        )
-        db.add(extracted)
-        db.flush()
-        print(f"Created ExtractedScent: {extracted.id}")
-    
-    update_scent_profile(memory.user_id, scent_data, memory, db)
-    
-    chunks = [memory.content[i:i+500] for i in range(0, len(memory.content), 450)]
+    chunks = [enhanced_content[i:i+500] for i in range(0, len(enhanced_content), 450)]
     print(f"Created {len(chunks)} chunks")
 
     for idx, chunk_text in enumerate(chunks):
@@ -189,6 +182,68 @@ def process_text(memory: ScentMemory, db):
         chunk.vector_id = str(chunk.id)
     
     print(f"Completed processing for memory {memory.id}")
+    return vision_result.get('image_description', '') 
+
+
+
+def process_text(memory: ScentMemory, db) -> str:
+
+    print(f"process_text called for {memory.id}")
+    print(f"Content length: {len(memory.content)}")
+
+    #summary = generate_summary(memory.content, user_context=memory.title)
+    #memory.summary = summary
+    #print(f"Generated summary: {summary[:100]}...")
+    
+    scent_data = extract_scents(memory.content, memory.emotion, memory.occasion)
+    print(f"Extracted scents: {scent_data}")
+
+    extracted = ExtractedScent(
+        memory_id=memory.id,
+        scent_name=scent_data.get('scent_name'),
+        brand=scent_data.get('brand'),
+        top_notes=scent_data.get('top_notes', []),
+        heart_notes=scent_data.get('heart_notes', []),
+        base_notes=scent_data.get('base_notes', []),
+        description=scent_data.get('description'),
+        scent_family=scent_data.get('scent_family'),
+        emotion=scent_data.get('emotion'),
+        color=scent_data.get('color'),
+        confidence=0.85,
+        source='text',
+        extraction_method='llm'
+    )
+        
+    db.add(extracted)
+    db.flush()
+    print(f"Created ExtractedScent: {extracted.id}")
+    enhanced_content = f"{memory.content}\n\nMemory description: {scent_data.get('description')}"
+
+    update_scent_profile(memory.user_id, scent_data, memory, db)
+    
+    chunks = [enhanced_content[i:i+500] for i in range(0, len(enhanced_content), 450)]
+    print(f"Created {len(chunks)} chunks")
+
+    for idx, chunk_text in enumerate(chunks):
+        embedding = generate_embedding(chunk_text)
+        chunk = MemoryChunk(
+            memory_id=memory.id,
+            content=chunk_text,
+            chunk_index=idx
+        )
+        db.add(chunk)
+        db.flush()
+        
+        store_embedding(
+            chunk_id=str(chunk.id),
+            embedding=embedding,
+            metadata={"user_id": str(memory.user_id), "memory_id": str(memory.id)}
+        )
+        
+        chunk.vector_id = str(chunk.id)
+    
+    print(f"Completed processing for memory {memory.id}")
+    return scent_data.get('description', '') 
 
 
 
@@ -200,43 +255,47 @@ def update_scent_profile(user_id, scent_data: dict, memory: ScentMemory, db):
             user_id=user_id, 
             preferred_families=[], 
             disliked_notes=[],
+            note_occurrence_counts = {"top": {}, "heart": {}, "base": {}},
             emotional_preferences=[],
-            top_notes=[],
-            heart_notes=[],
-            base_notes=[]
         )
         db.add(profile)
         db.flush()
     
-    notes = scent_data.get('notes', [])
-    for note in notes:
-        if note and note not in profile.preferred_families:
-            profile.preferred_families.append(note)
-    
-    family = scent_data.get('fragrance_family')
+    if not profile.note_occurrence_counts:
+        profile.note_occurrence_counts = {"top": {}, "heart": {}, "base": {}}
+
+    top_notes = scent_data.get('top_notes', [])
+    for note in top_notes:
+        if note:
+            profile.note_occurrence_counts["top"][note] = profile.note_occurrence_counts["top"].get(note, 0) + 1
+
+    heart_notes = scent_data.get('heart_notes', [])
+    for note in heart_notes:
+        if note:
+            profile.note_occurrence_counts["heart"][note] = profile.note_occurrence_counts["heart"].get(note, 0) + 1
+
+
+    base_notes = scent_data.get('base_notes', [])
+    for note in base_notes:
+        if note:
+            profile.note_occurrence_counts["base"][note] = profile.note_occurrence_counts["base"].get(note, 0) + 1
+
+
+    family = scent_data.get('scent_family')
     if family and family not in profile.preferred_families:
         profile.preferred_families.append(family)
 
     if memory.emotion and memory.emotion not in profile.emotional_preferences:
         profile.emotional_preferences.append(memory.emotion)
-    
-    for note in scent_data.get('top_notes', []):
-        if note and note not in profile.top_notes:
-            profile.top_notes.append(note)
-    
-    for note in scent_data.get('heart_notes', []):
-        if note and note not in profile.heart_notes:
-            profile.heart_notes.append(note)
-    
-    for note in scent_data.get('base_notes', []):
-        if note and note not in profile.base_notes:
-            profile.base_notes.append(note)
+
+    emotion = scent_data.get('emotion')
+    if emotion and emotion not in profile.emotional_preferences:
+        profile.emotional_preferences.append(emotion)
+
     
     flag_modified(profile, 'preferred_families')
     flag_modified(profile, 'emotional_preferences')
-    flag_modified(profile, 'top_notes')
-    flag_modified(profile, 'heart_notes')
-    flag_modified(profile, 'base_notes')
-    
+    flag_modified(profile, 'note_occurrence_counts')
+
     profile.total_memories += 1
     

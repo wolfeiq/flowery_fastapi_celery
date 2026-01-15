@@ -79,33 +79,6 @@ def update_my_profile(
 
 
 
-@router.get("/stats")
-def get_profile_stats(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Most common notes
-    note_counts = db.query(
-        func.unnest(ExtractedScent.notes).label('note'),
-        func.count().label('count')
-    ).join(ScentMemory).filter(
-        ScentMemory.user_id == current_user.id
-    ).group_by('note').order_by(
-        func.count().desc()
-    ).limit(10).all()
-    
-    # Fragrance family distribution
-    families = db.query(ScentProfile).filter_by(user_id=current_user.id).first()
-    
-    return {
-        "top_notes": [{"note": n.note, "count": n.count} for n in note_counts],
-        "preferred_families": families.preferred_families if families else [],
-        "total_memories": db.query(ScentMemory).filter_by(user_id=current_user.id).count(),
-        "total_extracted_scents": db.query(ExtractedScent).join(ScentMemory).filter(
-            ScentMemory.user_id == current_user.id
-        ).count()
-    }
-
 @router.get("/me")
 def get_my_profile(
     current_user: User = Depends(get_current_user),
@@ -118,17 +91,54 @@ def get_my_profile(
             "message": "No profile yet",
             "preferred_families": [],
             "disliked_notes": [],
-            "intensity_preference": None,
-            "budget_range": None,
+            "emotional_preferences": [],
+            "top_notes": [],
+            "heart_notes": [],
+            "base_notes": [],
             "total_memories": 0,
-            "total_queries": 0
+            "total_queries": 0,
+            "total_extracted_scents": 0
         }
+
+    top_notes = []
+    heart_notes = []
+    base_notes = []
+    
+    if profile.note_occurrence_counts:
+        top_layer = profile.note_occurrence_counts.get("top", {})
+        top_notes = sorted(
+            [{"note": note, "count": count} for note, count in top_layer.items()],
+            key=lambda x: x["count"],
+            reverse=True
+        )[:5]
+        
+        heart_layer = profile.note_occurrence_counts.get("heart", {})
+        heart_notes = sorted(
+            [{"note": note, "count": count} for note, count in heart_layer.items()],
+            key=lambda x: x["count"],
+            reverse=True
+        )[:5]
+        
+        base_layer = profile.note_occurrence_counts.get("base", {})
+        base_notes = sorted(
+            [{"note": note, "count": count} for note, count in base_layer.items()],
+            key=lambda x: x["count"],
+            reverse=True
+        )[:5]
+
+    total_extracted_scents = db.query(ExtractedScent).join(ScentMemory).filter(
+        ScentMemory.user_id == current_user.id
+    ).count()
     
     return {
-        "preferred_families": profile.preferred_families,
-        "disliked_notes": profile.disliked_notes,
-        "intensity_preference": profile.intensity_preference,
-        "budget_range": profile.budget_range,
+        "preferred_families": profile.preferred_families or [],
+        "disliked_notes": profile.disliked_notes or [],
+        "emotional_preferences": profile.emotional_preferences or [],
+        "top_notes": top_notes,
+        "heart_notes": heart_notes,
+        "base_notes": base_notes,
         "total_memories": profile.total_memories,
-        "total_queries": profile.total_queries
+        "total_queries": profile.total_queries,
+        "total_extracted_scents": total_extracted_scents,
+        "last_updated": profile.last_updated.isoformat() if profile.last_updated else None
     }

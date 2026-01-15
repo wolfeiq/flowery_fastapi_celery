@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.orm import relationship
 from ..database import Base
 
+#no longer needed; deprecated
 
 class ImageAnalysis(Base):
     __tablename__ = "image_analyses"

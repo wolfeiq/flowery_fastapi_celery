@@ -17,3 +17,4 @@ celery_app.conf.update(task_serializer='json', accept_content=['json'], result_s
 #slow
 #CPU / network heavy
 #not required to finish before the API responds
+#uvicorn app.main:app --reload

@@ -66,16 +66,22 @@ export const queryApi = {
     api.post(`/query/${queryId}/feedback`, feedback),
 };
 
-
 export const profileApi = {
   get: () => api.get('/profile/me'),
   
-  update: (data: { intensity_preference?: string; budget_range?: string; disliked_notes?: string[] }) =>
-    api.put('/profile/me', data),
+  update: (data: { 
+    intensity_preference?: string; 
+    budget_range?: string; 
+    disliked_notes?: string[];
+    top_notes?: string[];
+    heart_notes?: string[];
+    base_notes?: string[];
+    preferred_families?: string[];
+    emotional_preferences?: string[];
+  }) => api.put('/profile/me', data),
   
   stats: () => api.get('/profile/stats'),
 };
-
 
 export const musicApi = {
   link: (data: { memory_id: string; artist_name: string; track_name: string; spotify_url?: string }) =>

@@ -9,13 +9,18 @@ from ..database import Base
 
 class ExtractedScent(Base):
     __tablename__ = "extracted_scents"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     memory_id = Column(UUID(as_uuid=True), ForeignKey("scent_memories.id", ondelete="CASCADE"), nullable=False, index=True,)
     fragrance_id = Column(UUID(as_uuid=True), ForeignKey("fragrances.id", ondelete="SET NULL"), nullable=True, index=True,)
     scent_name = Column(String(255)) 
-    brand = Column(String(100))      
-    notes = Column(ARRAY(String))     
+    brand = Column(String(100))     
+    scent_family = Column(String(100)) 
+    top_notes = Column(ARRAY(String))   
+    heart_notes = Column(ARRAY(String))     
+    base_notes = Column(ARRAY(String))   
+    color = Column(String(100)) 
+    emotion = Column(String(100))  #we query this for frontend    
     description = Column(Text)        
     confidence = Column(Float, nullable=False)
     source = Column(String(50), nullable=False)  

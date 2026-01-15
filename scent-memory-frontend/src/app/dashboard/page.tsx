@@ -7,7 +7,10 @@ import UploadModal from '@/components/UploadModal';
 import { useWebSocket } from "@/hooks/websockets";
 import MemoriesList from '@/components/MemoriesList';
 import MemoryVisualization from '@/components/MemoryVisualization';
-import { memoriesApi } from '@/lib/api';
+import { memoriesApi, profileApi } from '@/lib/api';
+import ScentProfile from '@/components/ScentProfile'; 
+import ActionCardsSection from '@/components/ActionCardsSection';
+import Pomegranate3D from '@/components/Pomegranate3d';
 
 export default function Dashboard() {
   const [showUpload, setShowUpload] = useState(false);
@@ -15,6 +18,9 @@ export default function Dashboard() {
   const [loadingMemories, setLoadingMemories] = useState(true);
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const [scentProfile, setScentProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
 
   useWebSocket(user?.id);
   
@@ -27,6 +33,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchMemories();
+      fetchProfile();
     }
   }, [user]);
 
@@ -42,28 +49,41 @@ export default function Dashboard() {
     }
   };
 
+  const fetchProfile = async () => {
+  try {
+    setLoadingProfile(true);
+    const response = await profileApi.get();
+    setScentProfile(response.data);
+  } catch (error) {
+    console.error('Failed to fetch profile:', error);
+  } finally {
+    setLoadingProfile(false);
+  }
+};
+
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-neutral-800"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#c98e8f]"></div>
       </div>
     );
   }
-  
+
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <nav className="bg-white border-b border-neutral-200">
+<nav className="sticky top-0 z-50 bg-white/1 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-8 lg:px-16">
           <div className="flex justify-between h-20 items-center">
-            <h1 className="text-sm font-light tracking-wider text-neutral-800">SCENT MEMORY</h1>
+            <h1 className="text-sm font-light tracking-wider text-[#e89a9c]">SCENT MEMORY</h1>
             <div className="flex items-center gap-8">
-              <span className="text-sm font-light text-neutral-600">Welcome, {user.full_name}</span>
+              <span className="text-sm font-light text-[#c98e8f]">Welcome, {user.full_name}</span>
               <button
                 onClick={logout}
-                className="text-sm font-light text-neutral-700 hover:text-neutral-900 transition"
+                className="text-sm font-light text-[#c98e8f] hover:text-[#e89a9c] transition"
               >
                 Logout
               </button>
@@ -71,86 +91,15 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
-
-      {/* Hero Section */}
-      <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
-          <h2 className="text-5xl font-light mb-4 text-neutral-800" style={{ fontFamily: 'serif' }}>
-            Your Fragrance Journey
-          </h2>
-          <p className="text-neutral-600 font-light max-w-2xl">
-            Capture and explore your scent memories. Discover fragrances that resonate 
-            with your emotions, moments, and memories.
-          </p>
-        </div>
-      </div>
+<div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
+<ActionCardsSection onSuccess={fetchMemories} />
+</div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
-        {/* Action Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-          {/* Upload Memory Card */}
-          <div className="bg-white p-8 border border-neutral-200 hover:border-neutral-400 transition group">
-            <div className="h-32 mb-6 bg-neutral-100 flex items-center justify-center">
-              <svg className="w-12 h-12 text-neutral-400 group-hover:text-neutral-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-light mb-2 text-neutral-800" style={{ fontFamily: 'serif' }}>Upload Memory</h3>
-            <p className="text-sm font-light text-neutral-600 mb-6">Add a new scent memory to your collection</p>
-            <button
-              onClick={() => setShowUpload(true)}
-              className="w-full bg-neutral-800 text-white py-2.5 text-sm font-light tracking-wide hover:bg-neutral-900 transition"
-            >
-              Upload
-            </button>
-          </div>
-
-          {/* Spotify Card */}
-          <div className="bg-white p-8 border border-neutral-200 hover:border-neutral-400 transition group">
-            <div className="h-32 mb-6 bg-neutral-100 flex items-center justify-center">
-              <svg className="w-12 h-12 text-neutral-400 group-hover:text-neutral-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-light mb-2 text-neutral-800" style={{ fontFamily: 'serif' }}>Music to Fragrance</h3>
-            <p className="text-sm font-light text-neutral-600 mb-6">Discover scents inspired by your music</p>
-            <button className="w-full bg-neutral-800 text-white py-2.5 text-sm font-light tracking-wide hover:bg-neutral-900 transition">
-              Connect
-            </button>
-          </div>
-
-          {/* Query Card */}
-          <div className="bg-white p-8 border border-neutral-200 hover:border-neutral-400 transition group">
-            <div className="h-32 mb-6 bg-neutral-100 flex items-center justify-center">
-              <svg className="w-12 h-12 text-neutral-400 group-hover:text-neutral-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-light mb-2 text-neutral-800" style={{ fontFamily: 'serif' }}>Recommendations</h3>
-            <p className="text-sm font-light text-neutral-600 mb-6">Get personalized fragrance suggestions</p>
-            <button className="w-full bg-neutral-800 text-white py-2.5 text-sm font-light tracking-wide hover:bg-neutral-900 transition">
-              Explore
-            </button>
-          </div>
-
-          {/* Profile Card */}
-          <div className="bg-white p-8 border border-neutral-200 hover:border-neutral-400 transition group">
-            <div className="h-32 mb-6 bg-neutral-100 flex items-center justify-center">
-              <svg className="w-12 h-12 text-neutral-400 group-hover:text-neutral-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-light mb-2 text-neutral-800" style={{ fontFamily: 'serif' }}>Your Profile</h3>
-            <p className="text-sm font-light text-neutral-600 mb-6">View your preferences and insights</p>
-            <button className="w-full bg-neutral-800 text-white py-2.5 text-sm font-light tracking-wide hover:bg-neutral-900 transition">
-              View
-            </button>
-          </div>
-        </div>
 
         {/* Memories Section */}
-        <div className="border-t border-neutral-200 pt-16">
+        <div className="border-t border-white/10 pt-16">
           {/* 3D Visualization */}
           {memories.length > 0 && (
             <div className="mb-16">
@@ -158,19 +107,37 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Memories Grid */}
-          <h2 className="text-3xl font-light mb-8 text-neutral-800" style={{ fontFamily: 'serif' }}>
-            Your Memories
-          </h2>
-          <MemoriesList memories={memories} loading={loadingMemories} onRefresh={fetchMemories} />
+        {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-12 lg:gap-0">
+            {/* Left Column - Memories List */}
+            <div className="lg:pr-12">
+              <h2 className="text-3xl font-light mb-8 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
+                Your Memories
+              </h2>
+              <MemoriesList memories={memories} loading={loadingMemories} onRefresh={fetchMemories} />
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:block bg-white/10 h-full"></div>
+
+            {/* Right Column - Add your content here */}
+            <div className="lg:pl-12">
+              <h2 className="text-3xl font-light mb-8 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
+                Another Section
+              </h2>
+              <div className="lg:pl-12">
+  {loadingProfile ? (
+    <p className="text-[#c98e8f] font-light">Loading profile...</p>
+  ) : (
+    <ScentProfile profile={scentProfile} />
+  )}
+</div>
+            </div>
+          </div>
         </div>
       </div>
       
-      <UploadModal
-        isOpen={showUpload}
-        onClose={() => setShowUpload(false)}
-        onSuccess={fetchMemories}
-      />
+
     </div>
   );
 }

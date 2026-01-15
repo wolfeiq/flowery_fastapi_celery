@@ -1,9 +1,4 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { memoriesApi } from '@/lib/api';
-import toast from 'react-hot-toast';
-import MusicLinkModal from './MusicLinkModal';
+import { useState } from 'react';
 
 interface Memory {
   id: string;
@@ -21,91 +16,100 @@ interface MemoriesListProps {
 }
 
 export default function MemoriesList({ memories = [], loading = false, onRefresh }: MemoriesListProps) {
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
-
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <p className="text-sm font-light text-neutral-600">Loading memories...</p>
+      <div className="h-[600px] flex items-center justify-center">
+        <p className="text-sm font-light text-[#c98e8f]">Loading memories...</p>
       </div>
     );
   }
 
   if (memories.length === 0) {
     return (
-      <div className="bg-white border border-neutral-200 p-16 text-center">
-        <p className="text-neutral-600 font-light">No memories yet. Upload your first one to begin your journey.</p>
+      <div className="h-[700px] flex items-center justify-center">
+        <p className="text-[#c98e8f] font-light px-8 text-center">No memories yet. Upload your first one to begin your journey.</p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="h-[700px] overflow-y-auto pr-2 hide-scrollbar">
+
+      <div className="space-y-3">
         {memories.map((memory) => (
           <div
             key={memory.id}
-            className="bg-white border border-neutral-200 hover:border-neutral-400 transition group"
+            className="group relative"
           >
-            {/* Image placeholder */}
-            <div className="h-64 bg-neutral-100 relative overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-16 h-16 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-
+            {/* Bullet point */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#c98e8f]"></div>
+            
             {/* Content */}
-            <div className="p-6">
-              <h3 className="text-xl font-light mb-3 text-neutral-800" style={{ fontFamily: 'serif' }}>
+            <div className="pl-6 py-3 border-l-2 border-white/10 hover:border-[#c98e8f]/50 hover:bg-white/5 transition">
+              <h3 className="text-base font-light mb-1 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
                 {memory.title}
               </h3>
               
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[#c98e8f]/70">
                 {memory.occasion && (
-                  <span className="px-3 py-1 bg-neutral-100 text-neutral-700 text-xs font-light tracking-wide">
-                    {memory.occasion.toUpperCase()}
-                  </span>
+                  <>
+                    <span className="font-light">{memory.occasion}</span>
+                    <span>•</span>
+                  </>
                 )}
-                <span className="px-3 py-1 bg-neutral-100 text-neutral-700 text-xs font-light tracking-wide">
-                  {memory.memory_type.toUpperCase()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
+                <span className="font-light">{memory.memory_type}</span>
+                <span>•</span>
                 {memory.processed ? (
-                  <span className="text-xs font-light text-neutral-500">
-                    ✓ Processed
+                  <span className="text-[#e89a9c] flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Processed
                   </span>
                 ) : (
-                  <span className="text-xs font-light text-neutral-500">
-                    Processing...
-                  </span>
-                )}
-                
-                {memory.processed && (
-                  <button
-                    onClick={() => setSelectedMemory(memory)}
-                    className="text-xs font-light text-neutral-700 hover:text-neutral-900 transition tracking-wide"
-                  >
-                    ADD SONG →
-                  </button>
+                  <span className="text-[#c98e8f]/50 animate-pulse">Processing...</span>
                 )}
               </div>
             </div>
           </div>
         ))}
       </div>
+      
+      <style jsx>{`
+      .hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
 
-      {selectedMemory && (
-        <MusicLinkModal
-          isOpen={true}
-          onClose={() => setSelectedMemory(null)}
-          memoryId={selectedMemory.id}
-          memoryTitle={selectedMemory.title}
-        />
-      )}
-    </>
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari */
+}
+
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: transparent transparent;
+          transition: scrollbar-color 0.3s ease;
+        }
+        .custom-scrollbar:hover {
+          scrollbar-color: #c98e8f transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: transparent;
+          border-radius: 0px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background: #c98e8f;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+          background: #e89a9c;
+        }
+      `}</style>
+    </div>
   );
 }

@@ -18,14 +18,12 @@ class ScentMemory(Base):
     __tablename__ = "scent_memories"
    
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),  nullable=False, index=True)
     title = Column(String(255), nullable=False)
     content = Column(Text)
-    summary = Column(String(500))
     memory_type = Column(SQLEnum(MemoryType, name="memory_type_enum"), nullable=False, index=True)
     occasion = Column(String(100)) 
-    emotion = Column(String(100))  
+    emotion = Column(String(100))   
     season = Column(String(20)) 
     location = Column(String(200))  
     file_path = Column(String(500))

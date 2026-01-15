@@ -20,10 +20,11 @@ def validate_email(email: str) -> str:
         raise HTTPException(400, "Invalid email format")
     return email.lower()
 
-def validate_uuid(value: str) -> bool:
+def validate_uuid(value):
     try:
-        uuid.UUID(value)
-        return True
+        if isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(str(value))
     except ValueError:
         return False
     
@@ -35,3 +36,4 @@ def validate_password(password: str) -> str:
     if not re.search(r'[0-9]', password):
         raise HTTPException(400, "Password must contain number")
     return password
+

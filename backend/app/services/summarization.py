@@ -5,6 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+
+# no longer used
+
+
 SUMMARY_SYSTEM_PROMPT = """You are an expert at creating concise, evocative summaries of scent memories.
 
 Guidelines:
