@@ -1,11 +1,10 @@
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.sql import func
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum, Table, Index
+from sqlalchemy import Column, Text, Integer, DateTime, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ..database import Base
-from sqlalchemy.sql import func
 
 class MemoryChunk(Base):
     __tablename__ = "memory_chunks"

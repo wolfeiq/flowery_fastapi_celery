@@ -7,7 +7,6 @@ import uuid
 from ..database import get_db
 from ..models import User, ScentMemory, SpotifyLink
 from .auth import get_current_user
-from ..core.config import settings
 
 router = APIRouter()
 

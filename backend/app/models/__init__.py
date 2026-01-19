@@ -10,7 +10,6 @@ from .fragrance import Fragrance
 from .note import Note
 from .fragrance_note import fragrance_notes
 from .query_log import QueryLog, QueryType
-from .query_log import QueryLog
 from .recommendation import Recommendation
 from .training_example import TrainingExample
 from .spotify_link import SpotifyLink

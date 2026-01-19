@@ -1,7 +1,6 @@
 import lyricsgenius
 from ..core.config import settings
 from openai import OpenAI
-import re
 
 genius = lyricsgenius.Genius(settings.GENIUS_ACCESS_TOKEN)
 genius.verbose = False

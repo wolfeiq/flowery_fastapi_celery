@@ -1,6 +1,6 @@
 from sqlalchemy.dialects.postgresql import ARRAY
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum, Numeric, Table, Index
+from sqlalchemy import Column, String, Text, Integer, DateTime, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ..database import Base

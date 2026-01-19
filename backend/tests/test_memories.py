@@ -3,7 +3,7 @@ from fastapi import status
 from io import BytesIO
 from PIL import Image
 import uuid
-
+from app.models import User, ScentMemory
 
 class TestUploadMemory:
     """Test memory upload endpoint."""
@@ -52,7 +52,7 @@ class TestUploadMemory:
     
     def test_upload_file_too_large(self, client, auth_headers):
         """Test uploading file exceeding size limit."""
-        # Create large file (>10MB)
+
         large_file = BytesIO(b"x" * (11 * 1024 * 1024))
         
         response = client.post(
@@ -133,9 +133,7 @@ class TestListMemories:
     
     def test_list_memories_order(self, client, auth_headers, db_session, test_user):
         """Test memories are ordered by creation date descending."""
-        from app.models import ScentMemory
-        
-        # Create multiple memories
+
         for i in range(3):
             memory = ScentMemory(
                 user_id=test_user.id,
@@ -149,7 +147,7 @@ class TestListMemories:
         response = client.get("/api/memories/", headers=auth_headers)
         data = response.json()
         
-        # Verify newest first
+
         assert len(data) == 3
         for i in range(len(data) - 1):
             assert data[i]["created_at"] >= data[i + 1]["created_at"]
@@ -181,9 +179,8 @@ class TestGetMemory:
     
     def test_get_memory_wrong_user(self, client, auth_headers, db_session):
         """Test user cannot access another user's memory."""
-        from app.models import User, ScentMemory
         
-        # Create another user and their memory
+        
         other_user = User(
             email="other@example.com",
             hashed_password="hash",

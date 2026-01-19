@@ -1,20 +1,15 @@
 from venv import logger
 from .celery_app import celery_app
 from ..database import SessionLocal
-from ..models import ScentMemory, MemoryChunk, ImageAnalysis, ExtractedScent, SpotifyLink, ScentProfile
-import time
+from ..models import ScentMemory, MemoryChunk, ExtractedScent, ScentProfile
 from ..services.embeddings import generate_embedding
 from sqlalchemy.orm.attributes import flag_modified
 from ..services.vector_db import store_embedding
 from ..services.scent_extractor import extract_scents
 from ..services.vision_ai import analyze_image
 from ..services.pdf_extractor import extract_text_from_pdf
-from ..websocket import manager
-from app.services.summarization import generate_summary
-import asyncio
 import redis
 import json
-import redis
 from app.core.config import settings
 import os
 import base64

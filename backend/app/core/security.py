@@ -1,4 +1,3 @@
-import re
 from fastapi import HTTPException, Depends
 from ..core.config import settings
 from ..api.auth import get_current_user

@@ -2,37 +2,44 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 from unittest.mock import Mock, patch
 import uuid
-from datetime import datetime, timezone
+import os
+
+os.environ["TESTING"] = "true"
+os.environ["ENVIRONMENT"] = "testing"
+
+
+openai_patcher = patch('openai.OpenAI')
+mock_openai_class = openai_patcher.start()
+mock_openai_client = Mock()
+mock_response = Mock()
+mock_response.choices = [Mock(message=Mock(content="Mocked AI response"))]
+mock_response.usage = Mock(prompt_tokens_details=Mock(cached_tokens=0))
+mock_openai_client.chat.completions.create.return_value = mock_response
+mock_openai_class.return_value = mock_openai_client
 
 from app.main import app
-from app.database import Base, get_db
+from app.database import get_db, engine, SessionLocal, Base
 from app.models import User, ScentMemory, MemoryChunk, ScentProfile, QueryLog
-from app.core.auth import get_password_hash, create_access_token
+from app.api.auth import get_password_hash, create_access_token
 
-# In-memory SQLite for testing
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_db():
+    """Create and drop all tables for each test."""
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(scope="function")
-def db_session():
-    """Create a fresh database for each test."""
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
+def db_session(setup_test_db):
+    """Create a fresh database session for each test."""
+    session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(scope="function")
@@ -120,18 +127,16 @@ def mock_celery():
         yield mock
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_openai():
-    """Mock OpenAI API calls."""
-    with patch('openai.OpenAI') as mock:
+    """Mock OpenAI API calls globally."""
+    with patch('openai.OpenAI') as mock_class:
         mock_client = Mock()
         mock_response = Mock()
         mock_response.choices = [Mock(message=Mock(content="Mocked AI response"))]
-        mock_response.usage = Mock(
-            prompt_tokens_details=Mock(cached_tokens=0)
-        )
+        mock_response.usage = Mock(prompt_tokens_details=Mock(cached_tokens=0))
         mock_client.chat.completions.create.return_value = mock_response
-        mock.return_value = mock_client
+        mock_class.return_value = mock_client
         yield mock_client
 
 
@@ -151,8 +156,12 @@ def mock_redis():
 @pytest.fixture
 def mock_embedding():
     """Mock embedding generation."""
-    with patch('app.services.embeddings.generate_embedding') as mock:
-        mock.return_value = [0.1] * 1536  # Mock OpenAI embedding dimensions
+    with patch('app.services.embeddings.client') as mock:
+        mock_response = Mock()
+        mock_embedding = Mock()
+        mock_embedding.embedding = [0.1] * 1536
+        mock_response.data = [mock_embedding]
+        mock.embeddings.create.return_value = mock_response
         yield mock
 
 

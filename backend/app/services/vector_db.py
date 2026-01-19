@@ -1,6 +1,5 @@
 
 import chromadb
-from chromadb.config import Settings
 
 def get_collection():
     client = chromadb.PersistentClient(path="./chroma_db")

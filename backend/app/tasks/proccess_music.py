@@ -4,7 +4,6 @@ from ..models import SpotifyLink, ExtractedScent, ScentMemory
 from ..services.music_service import search_and_analyze_song
 import redis
 import json
-import redis
 from app.core.config import settings
 
 @celery_app.task

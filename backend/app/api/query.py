@@ -1,21 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator, Field
 from typing import List, Optional
 import uuid
-import hashlib
-import json
 import logging
 from openai import OpenAI
 from ..core.config import settings
 from ..services.embeddings import generate_embedding
 from ..services.vector_db import search_similar
-from ..models import MemoryChunk, ScentMemory, ScentProfile
+from ..models import MemoryChunk, ScentProfile
 from sqlalchemy.orm.attributes import flag_modified
 from ..database import get_db
 from ..models import User, QueryLog, QueryType
 from .auth import get_current_user
-from ..core.validation import validate_email, validate_password, sanitize_text, validate_uuid
+from ..core.validation import sanitize_text, validate_uuid
 from ..services.cache import (
     get_cached_recommendation,
     cache_recommendation,

@@ -5,9 +5,8 @@ import uuid
 from ..tasks.proccess_music import process_music_task
 
 from ..database import get_db
-from ..models import User, ScentMemory, SpotifyLink, ExtractedScent
+from ..models import User, ScentMemory, SpotifyLink
 from .auth import get_current_user
-from ..services.music_service import search_and_analyze_song
 from ..core.validation import sanitize_text
 
 router = APIRouter()

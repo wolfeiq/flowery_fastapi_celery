@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
-from unittest.mock import patch
-import uuid
+from unittest.mock import patch, Mock
+from app.models import User, QueryLog
 
 
 class TestSearchMemories:
@@ -15,7 +15,7 @@ class TestSearchMemories:
             headers=auth_headers,
             json={
                 "query": "What perfumes would I like?",
-                "query_type": "RECOMMENDATION"
+                "query_type": "recommendation"
             }
         )
         assert response.status_code == status.HTTP_200_OK
@@ -29,10 +29,10 @@ class TestSearchMemories:
     def test_search_with_cache_hit(self, client, auth_headers, test_memory,
                                    mock_embedding, mock_vector_db, mock_redis):
         """Test cache hit for identical query."""
-        # Mock cache hit
+
         mock_redis.get.return_value = '{"recommendation": "Cached response"}'
         
-        with patch('app.routers.query.get_cached_recommendation') as mock_cache:
+        with patch('app.api.query.get_cached_recommendation') as mock_cache:
             mock_cache.return_value = "Cached recommendation response"
             
             response = client.post(
@@ -77,7 +77,7 @@ class TestSearchMemories:
     def test_search_creates_query_log(self, client, auth_headers, db_session,
                                      mock_embedding, mock_vector_db, mock_openai):
         """Test that searches are logged."""
-        from app.models import QueryLog
+        
         
         response = client.post(
             "/api/query/search",
@@ -110,9 +110,7 @@ class TestSubmitFeedback:
     
     def test_submit_positive_feedback(self, client, auth_headers, db_session, test_user):
         """Test submitting positive feedback."""
-        from app.models import QueryLog
-        
-        # Create query log
+
         query = QueryLog(
             user_id=test_user.id,
             query_text="What perfumes?",
@@ -141,7 +139,6 @@ class TestSubmitFeedback:
         self, client, auth_headers, db_session, test_user, test_scent_profile, mock_redis
     ):
         """Test negative feedback updates scent profile."""
-        from app.models import QueryLog
         
         query = QueryLog(
             user_id=test_user.id,
@@ -171,19 +168,18 @@ class TestSubmitFeedback:
     def test_feedback_invalidates_cache(self, client, auth_headers, db_session,
                                        test_user, test_scent_profile):
         """Test that negative feedback invalidates cache."""
-        from app.models import QueryLog
         
         query = QueryLog(
             user_id=test_user.id,
             query_text="What perfumes?",
-            query_type="RECOMMENDATION",
+            query_type="recommendation",
             llm_response="Recommendations",
             model_version="gpt-4"
         )
         db_session.add(query)
         db_session.commit()
         
-        with patch('app.routers.query.invalidate_user_recommendations') as mock_invalidate:
+        with patch('app.api.query.invalidate_user_recommendations') as mock_invalidate:
             response = client.post(
                 f"/api/query/{query.id}/feedback",
                 headers=auth_headers,
@@ -198,7 +194,6 @@ class TestSubmitFeedback:
     
     def test_feedback_rating_validation(self, client, auth_headers, db_session, test_user):
         """Test rating validation (must be 1-5)."""
-        from app.models import QueryLog
         
         query = QueryLog(
             user_id=test_user.id,
@@ -210,15 +205,13 @@ class TestSubmitFeedback:
         db_session.add(query)
         db_session.commit()
         
-        # Test rating too high
         response = client.post(
             f"/api/query/{query.id}/feedback",
             headers=auth_headers,
             json={"rating": 6}
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-        
-        # Test rating too low
+
         response = client.post(
             f"/api/query/{query.id}/feedback",
             headers=auth_headers,
@@ -238,7 +231,7 @@ class TestSubmitFeedback:
     
     def test_feedback_wrong_user(self, client, auth_headers, db_session):
         """Test user cannot submit feedback for another user's query."""
-        from app.models import User, QueryLog
+        
         
         other_user = User(
             email="other@example.com",
@@ -267,7 +260,7 @@ class TestSubmitFeedback:
     
     def test_feedback_disliked_notes_limit(self, client, auth_headers, db_session, test_user):
         """Test disliked notes limit validation."""
-        from app.models import QueryLog
+        
         
         query = QueryLog(
             user_id=test_user.id,
@@ -279,7 +272,6 @@ class TestSubmitFeedback:
         db_session.add(query)
         db_session.commit()
         
-        # Try to submit more than 50 notes
         too_many_notes = [f"note_{i}" for i in range(51)]
         response = client.post(
             f"/api/query/{query.id}/feedback",

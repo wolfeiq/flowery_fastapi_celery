@@ -1,8 +1,6 @@
 from sqlalchemy import Column, String, Text
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from datetime import datetime
 import uuid
 from ..database import Base
 

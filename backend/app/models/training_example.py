@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
 from ..database import Base
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum, Table, Index
+from sqlalchemy import Column, String, Text, Boolean, Float, DateTime, ForeignKey
 
 
 

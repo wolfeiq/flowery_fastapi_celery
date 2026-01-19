@@ -1,14 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import auth, memories, query, spotify, rate_limits
+from .api import auth, memories, query, rate_limits
 from .api import profile
-from .api import fine_tuning
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from .middleware.rate_limit import rate_limit_middleware
 from .core.config import settings
 from .core.logging_config import setup_logging
 from .middleware.logging_middleware import log_requests
-from .api import auth, memories, query, profile, fine_tuning, music, health
+from .api import health
 import asyncio
 from .websockets.redis_listener import redis_listener
 from .websockets.routes import router as websocket_router

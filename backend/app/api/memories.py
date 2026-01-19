@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from pathlib import Path
-import shutil
 from ..tasks.process_memory import process_memory_task
 import uuid
 from ..core.validation import sanitize_text
 from ..database import get_db
 from ..models import User, ScentMemory, MemoryType
 from .auth import get_current_user
-from ..core.validation import validate_email, validate_password, sanitize_text, validate_uuid
+from ..core.validation import validate_uuid
 import base64
 
 MAX_FILE_SIZE = 10 * 1024 * 1024

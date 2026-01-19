@@ -1,15 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import ExtractedScent, ScentMemory, User, ScentProfile
 from .auth import get_current_user
-from ..services.embeddings import generate_embedding
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Literal
+from pydantic import field_validator
+from typing import List, Literal
 
 router = APIRouter()
 

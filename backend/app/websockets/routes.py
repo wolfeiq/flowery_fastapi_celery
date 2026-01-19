@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, Depends
+from fastapi import APIRouter, WebSocket
 from .manager import manager
 
 router = APIRouter()

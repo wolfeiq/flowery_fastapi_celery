@@ -31,6 +31,6 @@ async def redis_listener(): #Redis pubsub -> Websocket connections
             except Exception as e:
                 logger.error(f"Error: {e}")
                 
-    except Exception as e:
+    except Exception:
         await asyncio.sleep(5)
         await redis_listener()

@@ -5,7 +5,6 @@ from datetime import datetime
 from ..database import SessionLocal  
 from ..middleware.rate_limit import redis_client
 from ..tasks.celery_app import celery_app
-import logging
 
 router = APIRouter()
 

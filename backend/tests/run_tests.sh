@@ -1,22 +1,20 @@
 #!/bin/bash
 
-# Test runner script for FastAPI + Celery backend
-
 set -e
 
 echo "🧪 Running Backend Tests..."
 
-# Colors for output
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
-# Install test dependencies
+
 echo -e "${YELLOW}📦 Installing test dependencies...${NC}"
 pip install -r requirements-test.txt
 
-# Run different test suites
+
 run_tests() {
     case "$1" in
         "all")
@@ -68,7 +66,7 @@ run_tests() {
     esac
 }
 
-# Run the specified test suite or all tests by default
+
 TEST_SUITE=${1:-all}
 run_tests "$TEST_SUITE"
 
