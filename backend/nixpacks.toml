@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["postgresql", "openssl"]
+
+[phases.build]
+cmds = ["echo 'Using Dockerfile'"]
+
+[start]
+cmd = "/app/docker-entrypoint.sh"
