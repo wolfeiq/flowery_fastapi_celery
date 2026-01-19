@@ -28,7 +28,6 @@ export const FAKE_SCENT_PROFILE = {
   last_updated: '2026-01-18',
 };
 
-
 export const FAKE_MEMORIES = [
   {
     title: 'Summer Beach',
@@ -91,7 +90,113 @@ export const FAKE_MEMORIES = [
     ]
   },
 
+  {
+    title: 'Rainy Window',
+    processed: true,
+    emotion: 'Reflective',
+    extracted_scents: [
+      {
+        scent_name: 'Soft Rain',
+        scent_family: 'fresh',
+        top_notes: ['rain accord', 'aldehydes'],
+        heart_notes: ['violet', 'iris'],
+        base_notes: ['musk', 'ambergris'],
+        color: '#AFCBFF'
+      }
+    ]
+  },
+  {
+    title: 'Late Night Library',
+    processed: true,
+    emotion: 'Focused',
+    extracted_scents: [
+      {
+        scent_name: 'Old Pages',
+        scent_family: 'woody',
+        top_notes: ['paper', 'dust'],
+        heart_notes: ['cedarwood', 'vetiver'],
+        base_notes: ['leather', 'amber'],
+        color: '#6B5E62'
+      }
+    ]
+  },
+  {
+    title: 'Winter Scarf',
+    processed: true,
+    emotion: 'Comforted',
+    extracted_scents: [
+      {
+        scent_name: 'Cashmere Warmth',
+        scent_family: 'soft oriental',
+        top_notes: ['pink pepper', 'cardamom'],
+        heart_notes: ['cashmere wood', 'orris'],
+        base_notes: ['vanilla', 'white musk'],
+        color: '#E6D9C8'
+      }
+    ]
+  },
+  {
+    title: 'Midnight Drive',
+    processed: true,
+    emotion: 'Free',
+    extracted_scents: [
+      {
+        scent_name: 'Night Asphalt',
+        scent_family: 'aromatic',
+        top_notes: ['ozonic air', 'eucalyptus'],
+        heart_notes: ['lavender', 'sage'],
+        base_notes: ['patchouli', 'tonka'],
+        color: '#2F3E46'
+      }
+    ]
+  },
+  {
+    title: 'Old Love Letter',
+    processed: true,
+    emotion: 'Nostalgic',
+    extracted_scents: [
+      {
+        scent_name: 'Faded Ink',
+        scent_family: 'powdery',
+        top_notes: ['heliotrope', 'almond'],
+        heart_notes: ['rose absolute', 'violet'],
+        base_notes: ['vanilla', 'soft woods'],
+        color: '#D8BFD8'
+      }
+    ]
+  },
+  {
+    title: 'Fresh Sheets',
+    processed: true,
+    emotion: 'Peaceful',
+    extracted_scents: [
+      {
+        scent_name: 'Clean Linen',
+        scent_family: 'clean',
+        top_notes: ['aldehydes', 'lemon zest'],
+        heart_notes: ['cotton flower', 'lavender'],
+        base_notes: ['white musk', 'sandalwood'],
+        color: '#F5F9FF'
+      }
+    ]
+  },
+  {
+    title: 'Sunset Train Ride',
+    processed: true,
+    emotion: 'Dreamy',
+    extracted_scents: [
+      {
+        scent_name: 'Golden Hour',
+        scent_family: 'amber',
+        top_notes: ['mandarin', 'saffron'],
+        heart_notes: ['orange blossom', 'jasmine'],
+        base_notes: ['amber', 'benzoin'],
+        color: '#FF9F1C'
+      }
+    ]
+  }
 ];
+
 
 export const NOTE_ICONS: Record<string, string> = {
   'bergamot': '🍊',
