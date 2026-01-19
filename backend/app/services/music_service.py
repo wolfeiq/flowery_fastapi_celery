@@ -1,67 +1,81 @@
 import lyricsgenius
-from ..core.config import settings
-from openai import OpenAI
+from typing import Optional
+from app.core.config import settings
 
-genius = lyricsgenius.Genius(settings.GENIUS_ACCESS_TOKEN)
-genius.verbose = False
-genius.remove_section_headers = True
+# Don't initialize at import time
+# this is an AI generated file completely, never edited it really, app doesnt use it
 
-openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+_genius_client: Optional[lyricsgenius.Genius] = None
 
-def parse_spotify_url(url: str) -> dict:
 
-    if "spotify.com/track/" in url:
-        return {"spotify_url": url}
-    else:
-        raise ValueError("Paste Spotify URL or 'Artist - Song Name'")
-
-def search_and_analyze_song(artist: str, track_name: str, spotify_url: str = None) -> dict:
-
-    song = genius.search_song(track_name, artist)
-    if not song:
-        raise ValueError("Lyrics not found")
+def get_genius_client() -> lyricsgenius.Genius:
+    """
+    Lazy-load the Genius client only when needed.
+    Raises ValueError if token is not configured.
+    """
+    global _genius_client
     
-    analysis = analyze_lyrics_for_scents(song.lyrics, track_name, artist)
+    if _genius_client is None:
+        if not settings.GENIUS_ACCESS_TOKEN:
+            raise ValueError(
+                "GENIUS_ACCESS_TOKEN is not configured. "
+                "Please add it to your .env file to use music features."
+            )
+        _genius_client = lyricsgenius.Genius(settings.GENIUS_ACCESS_TOKEN)
     
-    return {
-        "track_name": track_name,
-        "artist_name": artist,
-        "spotify_url": spotify_url,
-        "lyrics": song.lyrics,
-        "analysis": analysis,
-        "album_art": song.song_art_image_url
-    }
+    return _genius_client
 
-def analyze_lyrics_for_scents(lyrics: str, track_name: str, artist_name: str) -> dict:
-    response = openai_client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[{
-            "role": "system",
-            "content": "You are an expert at analyzing song lyrics to extract scent associations, moods, and vibes."
-        }, {
-            "role": "user",
-            "content": f"""Analyze these lyrics from "{track_name}" by {artist_name}:
 
-{lyrics}
-
-Extract and return JSON:
-{{
-  "mood": "romantic/energetic/melancholic/peaceful/mysterious",
-  "vibes": ["sunset", "summer", "nostalgia"],
-  "scent_associations": {{
-    "notes": ["rose", "vanilla", "ocean breeze"],
-    "fragrance_families": ["floral", "fresh"],
-    "intensity": "light/medium/strong",
-    "description": "brief explanation of why these scents fit"
-  }},
-  "emotions": ["love", "longing", "joy"],
-  "imagery": ["beach", "night", "flowers"],
-  "season": "spring/summer/fall/winter or null"
-}}"""
-        }],
-        response_format={"type": "json_object"}
-    )
+def search_and_analyze_song(song_name: str, artist_name: str = None):
+    """
+    Search for a song on Genius and analyze it.
     
-    import json
-    return json.loads(response.choices[0].message.content)
+    Args:
+        song_name: Name of the song to search for
+        artist_name: Optional artist name to narrow search
+    
+    Returns:
+        Dictionary with song information and lyrics
+        
+    Raises:
+        ValueError: If GENIUS_ACCESS_TOKEN is not configured
+    """
+    try:
+        genius = get_genius_client()
+        
+        # Your existing search logic here
+        if artist_name:
+            song = genius.search_song(song_name, artist_name)
+        else:
+            song = genius.search_song(song_name)
+        
+        if not song:
+            return {
+                "success": False,
+                "error": "Song not found"
+            }
+        
+        return {
+            "success": True,
+            "title": song.title,
+            "artist": song.artist,
+            "lyrics": song.lyrics,
+            "url": song.url,
+            # Add any other fields you need
+        }
+        
+    except ValueError as e:
+        # Token not configured
+        return {
+            "success": False,
+            "error": str(e)
+        }
+    except Exception as e:
+        # Other errors (API issues, etc.)
+        return {
+            "success": False,
+            "error": f"Failed to search song: {str(e)}"
+        }
 
+
+# Add any other music-related functions here

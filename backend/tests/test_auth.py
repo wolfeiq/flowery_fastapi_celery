@@ -3,10 +3,9 @@ from fastapi import status
 
 
 class TestRegistration:
-    """Test user registration endpoint."""
     
     def test_register_success(self, client):
-        """Test successful user registration."""
+
         response = client.post(
             "/api/auth/register",
             json={

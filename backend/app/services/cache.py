@@ -7,16 +7,13 @@ from datetime import datetime
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
-#docker run -d -p 6379:6379 redis:alpine
-redis_client = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=0,
+
+redis_client = redis.Redis.from_url(
+    settings.REDIS_URL,
     decode_responses=True,
     socket_connect_timeout=5,
     socket_timeout=5
 )
-
 def get_cache_key(cache_key_data: str, user_id: str) -> str:
     hash_key = hashlib.md5(cache_key_data.encode()).hexdigest()
     return f"rec:{user_id}:{hash_key}"

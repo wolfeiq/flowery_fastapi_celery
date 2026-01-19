@@ -29,7 +29,7 @@ export function useWebSocket(userId?: string): MutableRefObject<WebSocket | null
       }
 
       try {
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL!;
         const ws = new WebSocket(`${wsUrl}/ws/${userId}`);
         wsRef.current = ws;
 

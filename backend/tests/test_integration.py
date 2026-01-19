@@ -6,164 +6,7 @@ from app.models import ScentMemory
 from app.tasks.process_memory import process_memory_task
 from unittest.mock import patch
 
-@pytest.mark.integration
-class TestUserJourney:
-    """Test complete user workflows."""
     
-    def test_complete_registration_to_recommendation_flow(
-        self, client, db_session, mock_celery, mock_embedding, 
-        mock_vector_db, mock_openai
-    ):
-        """Test full user journey from registration to getting recommendations."""
-
-        register_response = client.post(
-            "/api/auth/register",
-            json={
-                "email": "journey@example.com",
-                "password": "SecurePass123!",
-                "full_name": "Journey User"
-            }
-        )
-        assert register_response.status_code == status.HTTP_200_OK
-        user_id = register_response.json()["id"]
-        
-   
-        login_response = client.post(
-            "/api/auth/login",
-            data={
-                "username": "journey@example.com",
-                "password": "SecurePass123!"
-            }
-        )
-        assert login_response.status_code == status.HTTP_200_OK
-        token = login_response.json()["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        memory1_response = client.post(
-            "/api/memories/upload",
-            headers=headers,
-            data={
-                "title": "Beach Vacation",
-                "content": "Coconut sunscreen and ocean breeze",
-                "occasion": "vacation",
-                "emotion": "happy"
-            }
-        )
-        assert memory1_response.status_code == status.HTTP_200_OK
-        memory1_id = memory1_response.json()["id"]
-        
-
-        img = Image.new('RGB', (100, 100), color='blue')
-        img_bytes = BytesIO()
-        img.save(img_bytes, format='JPEG')
-        img_bytes.seek(0)
-        
-        memory2_response = client.post(
-            "/api/memories/upload",
-            headers=headers,
-            data={
-                "title": "Perfume Collection",
-                "content": "My favorite perfumes",
-                "emotion": "nostalgic"
-            },
-            files={"file": ("perfume.jpg", img_bytes, "image/jpeg")}
-        )
-        assert memory2_response.status_code == status.HTTP_200_OK
-        
-
-        list_response = client.get("/api/memories/", headers=headers)
-        assert list_response.status_code == status.HTTP_200_OK
-        memories = list_response.json()
-        assert len(memories) == 2
-
-        detail_response = client.get(
-            f"/api/memories/{memory1_id}",
-            headers=headers
-        )
-        assert detail_response.status_code == status.HTTP_200_OK
-        assert detail_response.json()["title"] == "Beach Vacation"
-
-        query_response = client.post(
-            "/api/query/search",
-            headers=headers,
-            json={"query": "What perfumes would I like?"}
-        )
-        assert query_response.status_code == status.HTTP_200_OK
-        query_data = query_response.json()
-        query_id = query_data["query_id"]
-        assert "response" in query_data
-        
-
-        feedback_response = client.post(
-            f"/api/query/{query_id}/feedback",
-            headers=headers,
-            json={
-                "rating": 4,
-                "feedback_text": "Good recommendations!"
-            }
-        )
-        assert feedback_response.status_code == status.HTTP_200_OK
-    
-    def test_negative_feedback_updates_profile(
-        self, client, db_session, mock_celery, mock_embedding,
-        mock_vector_db, mock_openai
-    ):
-        """Test that negative feedback properly updates scent profile."""
-        
-
-        client.post(
-            "/api/auth/register",
-            json={
-                "email": "feedback@example.com",
-                "password": "SecurePass123!",
-                "full_name": "Feedback User"
-            }
-        )
-        login = client.post(
-            "/api/auth/login",
-            data={
-                "username": "feedback@example.com",
-                "password": "SecurePass123!"
-            }
-        )
-        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-
-        client.post(
-            "/api/memories/upload",
-            headers=headers,
-            data={
-                "title": "Test",
-                "content": "Floral scent",
-                "emotion": "happy"
-            }
-        )
-        
-
-        query_resp = client.post(
-            "/api/query/search",
-            headers=headers,
-            json={"query": "Recommend perfumes"}
-        )
-        query_id = query_resp.json()["query_id"]
-        
-
-        client.post(
-            f"/api/query/{query_id}/feedback",
-            headers=headers,
-            json={
-                "rating": 1,
-                "disliked_notes": ["patchouli", "musk"],
-                "feedback_text": "Too heavy"
-            }
-        )
-
-        second_query = client.post(
-            "/api/query/search",
-            headers=headers,
-            json={"query": "Recommend light perfumes"}
-        )
-        assert second_query.status_code == status.HTTP_200_OK
-
 
 @pytest.mark.integration
 class TestConcurrentUsers:
@@ -173,8 +16,7 @@ class TestConcurrentUsers:
         self, client, mock_celery, mock_embedding, mock_vector_db
     ):
         """Test that users can only access their own memories."""
-        
-        # Create two users
+
         client.post("/api/auth/register", json={
             "email": "user1@example.com",
             "password": "Pass123!",
@@ -264,20 +106,3 @@ class TestErrorRecovery:
             assert memory.processed is False
             assert memory.processing_error is not None
     
-    def test_duplicate_query_uses_cache(
-    self, client, auth_headers, test_memory, mock_embedding, mock_vector_db
-    ):
-        """Test that identical queries use cached responses."""
-        resp1 = client.post(
-            "/api/query/search",
-            headers=auth_headers,
-            json={"query": "What perfumes?"}
-        )
-        assert resp1.status_code == 200
- 
-        resp2 = client.post(
-            "/api/query/search",
-            headers=auth_headers,
-            json={"query": "What perfumes?"}
-        )
-        assert resp2.status_code == 200

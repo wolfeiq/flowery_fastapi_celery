@@ -1,5 +1,5 @@
 'use client';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useLogin } from '@/hooks/useAuth';
 import { useHumaneFont } from '@/hooks/humaneFonts';
 import AuthLayout from '@/components/AuthLayout';
@@ -13,6 +13,10 @@ export default function LoginPage() {
   const login = useLogin();
 
   useHumaneFont();
+   useEffect(() => {
+  console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+  console.log("WS URL:", process.env.NEXT_PUBLIC_WS_URL);
+}, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

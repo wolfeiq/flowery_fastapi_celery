@@ -1,15 +1,14 @@
-
 import chromadb
+import os
 
 def get_collection():
-    client = chromadb.PersistentClient(path="./chroma_db")
+    client = chromadb.HttpClient(host="chromadb", port=8000)
     return client.get_or_create_collection(name="memory_chunks")
 
 def store_embedding(chunk_id: str, embedding: list, metadata: dict):
     collection = get_collection()
     collection.add(ids=[chunk_id], embeddings=[embedding], metadatas=[metadata])
 
-#cosine similarity: 1 the same, -1 opposite meaning
 def search_similar(query_embedding: list, user_id: str, top_k: int = 5):
     collection = get_collection()
     return collection.query(

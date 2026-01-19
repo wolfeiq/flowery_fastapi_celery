@@ -20,7 +20,7 @@ from app.services.cache import invalidate_user_recommendations
 #Vector DB writes
 #RAG
 #LLM inference / fine-tuning prep
-#Spotify enrichment
+#Spotify enrichment - no longer needed
 
 
 #with cache invalidation

@@ -29,7 +29,6 @@ class TestUploadMemory:
     
     def test_upload_with_image(self, client, auth_headers, mock_celery):
         """Test uploading memory with image."""
-        # Create test image
         img = Image.new('RGB', (100, 100), color='red')
         img_bytes = BytesIO()
         img.save(img_bytes, format='JPEG')

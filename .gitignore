@@ -1,45 +1,88 @@
 
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.pyc
-*.pyo
-*.pyd
-*.env
-*.venv
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+.env
+.venv
 env/
 venv/
 ENV/
-.env/
+env.bak/
+venv.bak/
+.python-version
 
-build/
-dist/
-*.egg-info/
-*.egg
-*.whl
+
+.env
+.env.local
+.env.production
+.env.development
+*.env
 
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
 
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 
 *.log
 logs/
+*.log.*
+
+
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+
+
 celerybeat-schedule
+celerybeat.pid
 *.pid
 
 
-*.sqlite3
-*.db
-
-
 alembic/versions/*.pyc
+
+
+chroma_db/
+chromadb/
+uploads/
+temp/
+tmp/
+
+
+*.log
+docker-compose.override.yml
 
 
 node_modules/
@@ -47,14 +90,15 @@ npm-debug.log
 yarn-error.log
 
 
-.python-version
+*.bak
+*.backup
+*.sql
 
+*.pem
+*.key
+*.crt
+secrets/
+.secrets/
 
-chroma_db/
-chromadb/
-
-
-uploads/
-
-
-
+.railway/
+.sentryclirc

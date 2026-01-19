@@ -6,6 +6,9 @@ import redis
 import json
 from app.core.config import settings
 
+
+#not used anymore 
+
 @celery_app.task
 def process_music_task(user_id: str, memory_id: str, artist: str, track: str, spotify_url: str = None):
     db = SessionLocal()

@@ -5,9 +5,54 @@ from sqlalchemy.orm import sessionmaker
 from unittest.mock import Mock, patch
 import uuid
 import os
+from unittest.mock import Mock, patch, MagicMock
+from app.main import app
+from app.database import get_db, engine, SessionLocal, Base
+from app.models import User, ScentMemory, MemoryChunk, ScentProfile, QueryLog
+from app.api.auth import get_password_hash, create_access_token
 
+
+
+os.environ['ENVIRONMENT'] = 'testing'
+os.environ['DATABASE_URL'] = os.getenv('DATABASE_URL', 'sqlite:///./test.db')
+os.environ['REDIS_URL'] = os.getenv('REDIS_URL', 'redis://localhost:6379/1')
 os.environ["TESTING"] = "true"
-os.environ["ENVIRONMENT"] = "testing"
+
+
+@pytest.fixture(autouse=True)
+def mock_chromadb():
+    """Mock ChromaDB for all tests"""
+    with patch('chromadb.HttpClient') as mock_client:
+        # Generate valid UUIDs for test data
+        chunk_id_1 = str(uuid.uuid4())
+        chunk_id_2 = str(uuid.uuid4())
+        user_id = str(uuid.uuid4())
+        
+        # Mock collection
+        mock_collection = MagicMock()
+        mock_collection.add.return_value = None
+        mock_collection.query.return_value = {
+            'ids': [[chunk_id_1, chunk_id_2]],  # Use real UUIDs
+            'documents': [['Test content 1', 'Test content 2']],
+            'metadatas': [[{'user_id': user_id}, {'user_id': user_id}]],
+            'distances': [[0.1, 0.2]]
+        }
+        mock_collection.get.return_value = {
+            'ids': [],
+            'documents': [],
+            'metadatas': []
+        }
+        mock_collection.count.return_value = 2
+        
+        # Mock client
+        mock_client_instance = MagicMock()
+        mock_client_instance.get_or_create_collection.return_value = mock_collection
+        mock_client_instance.get_collection.return_value = mock_collection
+        mock_client.return_value = mock_client_instance
+        
+        yield mock_collection
+
+
 
 
 openai_patcher = patch('openai.OpenAI')
@@ -18,11 +63,6 @@ mock_response.choices = [Mock(message=Mock(content="Mocked AI response"))]
 mock_response.usage = Mock(prompt_tokens_details=Mock(cached_tokens=0))
 mock_openai_client.chat.completions.create.return_value = mock_response
 mock_openai_class.return_value = mock_openai_client
-
-from app.main import app
-from app.database import get_db, engine, SessionLocal, Base
-from app.models import User, ScentMemory, MemoryChunk, ScentProfile, QueryLog
-from app.api.auth import get_password_hash, create_access_token
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_test_db():

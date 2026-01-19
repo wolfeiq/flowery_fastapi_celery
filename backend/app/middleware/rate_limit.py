@@ -7,7 +7,9 @@ import jwt
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
-redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+
+
+redis_client = redis.Redis.from_url(settings.redis_url_computed, decode_responses=True)
 
 def get_user_id_from_token(request: Request) -> str | None:
     try:
@@ -16,9 +18,12 @@ def get_user_id_from_token(request: Request) -> str | None:
             return None
         
         token = auth_header.replace("Bearer ", "")
-        payload = jwt.decode(token, settings.AUTH_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.AUTH_KEY, algorithms=[settings.ALGORITHM])
         return payload.get("sub")
-    except:
+    except jwt.InvalidTokenError:
+        return None
+    except Exception as e:
+        logger.warning(f"Error decoding token: {e}")
         return None
 
 def get_user_id_from_request(request: Request) -> str | None:
@@ -63,14 +68,16 @@ def increment_rate_limit(key: str, window_seconds: int):
     except Exception as e:
         logger.warning(f"Failed to increment rate limit: {e}")
 
-def create_rate_limit_response(status_code: int, content: dict):
+def create_rate_limit_response(status_code: int, content: dict, origin: str = None):
     response = JSONResponse(
         status_code=status_code,
         content=content
     )
 
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
+    if origin and origin in settings.cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
     return response
 
 async def rate_limit_middleware(request: Request, call_next):
@@ -81,15 +88,20 @@ async def rate_limit_middleware(request: Request, call_next):
     skip_paths = ["/", "/health", "/docs", "/openapi.json", "/api/auth/login", "/api/auth/register"]
     if request.url.path in skip_paths or "/admin/" in request.url.path:
         return await call_next(request)
-    
+
+    origin = request.headers.get("origin")
     user_id = get_user_id_from_request(request)
-    
+
     if request.url.path == "/api/memories/upload" and request.method == "POST":
         if user_id:
             today = date.today().isoformat()
             key = f"upload_limit:{user_id}:{today}"
             
-            limit_check = check_rate_limit(key, limit=3, window_seconds=86400)
+            limit_check = check_rate_limit(
+                key, 
+                limit=settings.UPLOAD_LIMIT_PER_DAY, 
+                window_seconds=86400
+            )
             
             if not limit_check["allowed"]:
                 return create_rate_limit_response(
@@ -97,13 +109,14 @@ async def rate_limit_middleware(request: Request, call_next):
                     content={
                         "detail": {
                             "error": "Daily upload limit reached",
-                            "message": "You can upload a maximum of 3 memories per day. Try again tomorrow!",
+                            "message": f"You can upload a maximum of {settings.UPLOAD_LIMIT_PER_DAY} memories per day. Try again tomorrow!",
                             "limit": limit_check["limit"],
                             "used": limit_check["used"],
                             "remaining": 0,
                             "reset_at": limit_check["reset_at"]
                         }
-                    }
+                    },
+                    origin=origin
                 )
             
             response = await call_next(request)
@@ -120,7 +133,11 @@ async def rate_limit_middleware(request: Request, call_next):
             today = date.today().isoformat()
             key = f"query_limit:{user_id}:{today}"
             
-            limit_check = check_rate_limit(key, limit=4, window_seconds=86400)
+            limit_check = check_rate_limit(
+                key, 
+                limit=settings.QUERY_LIMIT_PER_DAY, 
+                window_seconds=86400
+            )
             
             if not limit_check["allowed"]:
                 return create_rate_limit_response(
@@ -128,13 +145,14 @@ async def rate_limit_middleware(request: Request, call_next):
                     content={
                         "detail": {
                             "error": "Daily query limit reached",
-                            "message": "You can make a maximum of 4 queries per day. Try again tomorrow!",
+                            "message": f"You can make a maximum of {settings.QUERY_LIMIT_PER_DAY} queries per day. Try again tomorrow!",
                             "limit": limit_check["limit"],
                             "used": limit_check["used"],
                             "remaining": 0,
                             "reset_at": limit_check["reset_at"]
                         }
-                    }
+                    },
+                    origin=origin
                 )
             
             response = await call_next(request)
@@ -145,13 +163,17 @@ async def rate_limit_middleware(request: Request, call_next):
             return response
         
         return await call_next(request)
-    
+
     if request.url.path.startswith("/api/profile") and request.method in ["PUT", "PATCH", "POST"]:
         if user_id:
             today = date.today().isoformat()
             key = f"profile_update_limit:{user_id}:{today}"
             
-            limit_check = check_rate_limit(key, limit=1, window_seconds=86400)
+            limit_check = check_rate_limit(
+                key, 
+                limit=settings.PROFILE_UPDATE_LIMIT_PER_DAY, 
+                window_seconds=86400
+            )
             
             if not limit_check["allowed"]:
                 return create_rate_limit_response(
@@ -159,13 +181,14 @@ async def rate_limit_middleware(request: Request, call_next):
                     content={
                         "detail": {
                             "error": "Daily profile update limit reached",
-                            "message": "You can update your profile once per day. Try again tomorrow!",
+                            "message": f"You can update your profile {settings.PROFILE_UPDATE_LIMIT_PER_DAY} time per day. Try again tomorrow!",
                             "limit": limit_check["limit"],
                             "used": limit_check["used"],
                             "remaining": 0,
                             "reset_at": limit_check["reset_at"]
                         }
-                    }
+                    },
+                    origin=origin
                 )
             
             response = await call_next(request)
@@ -180,14 +203,19 @@ async def rate_limit_middleware(request: Request, call_next):
     client_ip = request.client.host
     key = f"rate_limit:{client_ip}"
     
-    limit_check = check_rate_limit(key, limit=settings.RATE_LIMIT_PER_MINUTE, window_seconds=60)
+    limit_check = check_rate_limit(
+        key, 
+        limit=settings.RATE_LIMIT_PER_MINUTE, 
+        window_seconds=60
+    )
     
     if not limit_check["allowed"]:
         return create_rate_limit_response(
             status_code=429,
             content={
                 "detail": "Too many requests. Please try again later."
-            }
+            },
+            origin=origin
         )
     
     response = await call_next(request)

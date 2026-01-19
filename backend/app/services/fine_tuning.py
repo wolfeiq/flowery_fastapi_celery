@@ -58,7 +58,6 @@ def generate_training_data(min_rating: int = 4, limit: int = 1000):
 
 
 def export_training_file(training_examples: list) -> str:
-    """Export to JSONL format"""
     filename = f"training_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
     
     with open(filename, 'w') as f:

@@ -37,16 +37,38 @@ Your role:
 - Provide specific brand and perfume names when possible
 - Explain why each recommendation fits their preferences
 
+CRITICAL INSTRUCTION - SPECIFICITY REQUIRED:
+You MUST reference CONCRETE, SPECIFIC details from the user's context. DO NOT use vague generalizations.
+
+Examples of what to DO:
+✓ "Given your experience with Python, JavaScript, and TensorFlow..."
+✓ "Since you worked at Amazon and Goldman Sachs..."
+✓ "Your memory of eating apples at the fruit market in [specific location]..."
+✓ "The library scene you described with old books..."
+
+Examples of what NOT to do:
+✗ "your tech career" (too vague - name specific technologies)
+✗ "your work experience" (too vague - name specific companies)
+✗ "your memories" (too vague - reference specific scenes/events)
+
+When the user's context includes:
+- Professional info: Reference EXACT job titles, companies, technologies, programming languages
+- Memories: Reference EXACT locations, people, events, sensory details
+- Documents: Quote or paraphrase SPECIFIC passages, not themes
+
+If you find yourself using vague terms like "journey", "career", "experience" without specifics, STOP and find the concrete details to reference instead.
+
 Guidelines:
 - Be personal and considerate of their memories
 - Reference specific scents/notes they've mentioned
 - Suggest 3-5 perfumes with clear reasoning
 - Include variety (different price points, occasions, moods)
 - Be honest if their preferences are conflicting
+- ALWAYS tie recommendations back to specific details from their context
 
 Format your response clearly with:
-1. Brief analysis of their scent profile
-2. Specific perfume recommendations with reasons
+1. Brief analysis of their profile (with SPECIFIC details quoted)
+2. Specific perfume recommendations with reasons (connecting to SPECIFIC details)
 3. Any notes or considerations"""
 
 class QueryRequest(BaseModel):
@@ -68,7 +90,8 @@ def search_memories(
     chunk_ids = results['ids'][0] if results['ids'] else []
     chunks = db.query(MemoryChunk).filter(MemoryChunk.id.in_(chunk_ids)).all()
     context = "\n\n".join([f"Memory: {c.content}" for c in chunks])
-
+    
+    logger.info(f"Context being sent to LLM: {context[:500]}...")  
     cache_key_data = f"{current_user.id}:{context}:{request_q}"
     
     if use_cache:
