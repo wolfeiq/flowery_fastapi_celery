@@ -1,71 +1,47 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import UploadModal from '@/components/UploadModal';
+import { useMe, useLogout } from '@/hooks/useAuth'; 
 import { useWebSocket } from "@/hooks/websockets";
+import { useMemories } from '@/hooks/useMemories';
+import { useProfile } from '@/hooks/useProfile';
+import { useHumaneFont } from '@/hooks/humaneFonts';
+import ShaderGradientBackground from '@/components/ShaderGradientBackground';
 import MemoriesList from '@/components/MemoriesList';
 import MemoryVisualization from '@/components/MemoryVisualization';
-import { memoriesApi, profileApi } from '@/lib/api';
 import ScentProfile from '@/components/ScentProfile'; 
 import ActionCardsSection from '@/components/ActionCardsSection';
-import Pomegranate3D from '@/components/Pomegranate3d';
+import Footer from '@/components/Footer';
 
 export default function Dashboard() {
-  const [showUpload, setShowUpload] = useState(false);
-  const [memories, setMemories] = useState([]);
-  const [loadingMemories, setLoadingMemories] = useState(true);
-  const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [scentProfile, setScentProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [showSearch, setShowSearch] = useState(false);
-
-  useWebSocket(user?.id);
+  const [mounted, setMounted] = useState(false);
+  const { data: user, isLoading: loadingAuth, error: authError } = useMe();
+  const logout = useLogout();
+  const { data: memories = [], isLoading: loadingMemories, refetch: refetchMemories } = useMemories();
+  const { data: scentProfile, isLoading: loadingProfile } = useProfile();
   
+  useWebSocket(user?.id);
+  useHumaneFont();
   useEffect(() => {
-    if (!loading && !user) {
+    setMounted(true);
+  }, []);
+  
+
+  useEffect(() => {
+    if (!loadingAuth && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user) {
-      fetchMemories();
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchMemories = async () => {
-    setLoadingMemories(true);
-    try {
-      const response = await memoriesApi.list();
-      setMemories(response.data);
-    } catch (error) {
-      console.error('Failed to load memories');
-    } finally {
-      setLoadingMemories(false);
-    }
-  };
-
-  const fetchProfile = async () => {
-  try {
-    setLoadingProfile(true);
-    const response = await profileApi.get();
-    setScentProfile(response.data);
-  } catch (error) {
-    console.error('Failed to fetch profile:', error);
-  } finally {
-    setLoadingProfile(false);
-  }
-};
+  }, [user, loadingAuth, router]);
 
 
-  if (loading) {
+  if (!mounted || loadingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#c98e8f]"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#1a1818]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#c98e8f]" role="status">
+          <span className="sr-only">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -73,71 +49,72 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-<nav className="sticky top-0 z-50 bg-white/1 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-8 lg:px-16">
-          <div className="flex justify-between h-20 items-center">
-            <h1 className="text-sm font-light tracking-wider text-[#e89a9c]">SCENT MEMORY</h1>
-            <div className="flex items-center gap-8">
-              <span className="text-sm font-light text-[#c98e8f]">Welcome, {user.full_name}</span>
-              <button
-                onClick={logout}
-                className="text-sm font-light text-[#c98e8f] hover:text-[#e89a9c] transition"
-              >
-                Logout
-              </button>
+    <div className="min-h-screen relative bg-[#1a1818]">
+      <ShaderGradientBackground cameraZoom={1.95} />
+      <div className="relative z-10">
+
+        <nav className="sticky top-0 z-50 bg-transparent">
+          <div className="max-w-7xl mx-auto px-8 lg:px-16">
+            <div className="flex justify-between h-20 items-center">
+              <h1 className="text-sm font-light tracking-wider text-white/90">SCENT MEMORY</h1>
+              <div className="flex items-center gap-8">
+                <span className="text-sm font-light text-white/80">
+                  Welcome, {user.full_name}
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-sm font-light text-white/80 hover:text-white transition"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
-<div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
-<ActionCardsSection onSuccess={fetchMemories} />
-</div>
+        </nav>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
-
-        {/* Memories Section */}
-        <div className="border-t border-white/10 pt-16">
-          {/* 3D Visualization */}
-          {memories.length > 0 && (
-            <div className="mb-16">
-              <MemoryVisualization memories={memories} />
-            </div>
-          )}
-
-        {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-12 lg:gap-0">
-            {/* Left Column - Memories List */}
-            <div className="lg:pr-12">
-              <h2 className="text-3xl font-light mb-8 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
+        <ActionCardsSection />
+        <div className="backdrop-blur-3xl bg-black/30">
+          <div className="max-w-7xl mx-auto px-8 lg:px-16 py-16">
+            <section className="border-t border-white/10 pt-16">
+              <h2 className="text-9xl font-light mb-8 text-white/90" style={{ fontFamily: "'HUMANE', sans-serif" }}>
                 Your Memories
               </h2>
-              <MemoriesList memories={memories} loading={loadingMemories} onRefresh={fetchMemories} />
-            </div>
+              
+              <div className="mb-16">
+                <MemoryVisualization memories={memories} />
+              </div>
 
-            {/* Divider */}
-            <div className="hidden lg:block bg-white/10 h-full"></div>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-12 lg:gap-0">
+                <div className="lg:pr-12">
+                  <h3 className="text-9xl font-light mb-8 text-white/90" style={{ fontFamily: "'HUMANE', sans-serif" }}>
+                    Memory Archive
+                  </h3>
+                  <MemoriesList 
+                    memories={memories} 
+                    loading={loadingMemories} 
+                    onRefresh={refetchMemories} 
+                  />
+                </div>
 
-            {/* Right Column - Add your content here */}
-            <div className="lg:pl-12">
-              <h2 className="text-3xl font-light mb-8 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
-                Another Section
-              </h2>
-              <div className="lg:pl-12">
-  {loadingProfile ? (
-    <p className="text-[#c98e8f] font-light">Loading profile...</p>
-  ) : (
-    <ScentProfile profile={scentProfile} />
-  )}
-</div>
-            </div>
+                <div className="hidden lg:block bg-white/10 h-full" aria-hidden="true" />
+                <div className="lg:pl-12">
+                  <h3 className="text-9xl font-light mb-8 text-white/90" style={{ fontFamily: "'HUMANE', sans-serif" }}>
+                    Your Fragrance Pyramid
+                  </h3>
+                  {loadingProfile ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-pulse text-white/70 font-light">Loading profile...</div>
+                    </div>
+                  ) : (
+                    <ScentProfile profile={scentProfile || null} />
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         </div>
+        <Footer />
       </div>
-      
-
     </div>
   );
 }

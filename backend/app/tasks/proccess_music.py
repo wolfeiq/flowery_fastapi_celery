@@ -54,9 +54,7 @@ def process_music_task(user_id: str, memory_id: str, artist: str, track: str, sp
         
         song_result = r.publish("memory_events", json.dumps(message))
         
-        
-        if song_result == 0:
-            print("No subscribers listening to memory_events!")
+    
 
         r.close()
 

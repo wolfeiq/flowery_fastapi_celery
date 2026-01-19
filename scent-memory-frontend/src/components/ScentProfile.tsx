@@ -1,67 +1,28 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Profile, NoteCount } from '@/lib/api';
+import { NOTE_ICONS } from '@/components/FakeData';
+
 
 interface ScentProfileProps {
-  profile: {
-    id?: string;
-    user_id?: string;
-    preferred_families?: string[];
-    top_notes?: string[];
-    heart_notes?: string[];
-    base_notes?: string[];
-    disliked_notes?: string[];
-    intensity_preference?: string;
-    emotional_preferences?: string[];
-    budget_range?: string;
-    total_memories?: number;
-    total_queries?: number;
-    profile_data?: any;
-    last_updated?: string;
-  } | null;
+  profile: Profile | null;
 }
 
-const ScentProfile: React.FC<ScentProfileProps> = ({ profile }) => {
+const getTopNotes = (notes?: NoteCount[], limit = 5): string[] => {
+  if (!notes || notes.length === 0) return [];
+  
+  return [...notes]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map(n => n.note);
+};
 
-  const noteImages = {
-    'bergamot': '🍊',
-    'lemon': '🍋',
-    'lavender': '💜',
-    'mint': '🌿',
-    'grapefruit': '🍊',
-    'orange': '🍊',
-    'neroli': '🌸',
-    'basil': '🌿',
-    'aldehydes': '✨',
-
-    'rose': '🌹',
-    'jasmine': '🌸',
-    'ylang ylang': '🌺',
-    'geranium': '🌺',
-    'lily': '🌷',
-    'violet': '💜',
-    'orchid': '🌸',
-    'tuberose': '🌸',
-    'iris': '💜',
-
-    'sandalwood': '🪵',
-    'vanilla': '🍦',
-    'musk': '🤍',
-    'amber': '🟡',
-    'patchouli': '🍂',
-    'cedar': '🌲',
-    'vetiver': '🌾',
-    'tonka bean': '🫘',
-    'oud': '🪵',
-    'oakmoss': '🌿',
-
-    'default': '🌿'
-  };
-
-const getIcon = (note: string) => {
+const getIcon = (note: string): string => {
   const lowerNote = note.toLowerCase();
- 
-  if (noteImages[lowerNote as keyof typeof noteImages]) {
-    return noteImages[lowerNote as keyof typeof noteImages];
+  
+  if (NOTE_ICONS[lowerNote]) {
+    return NOTE_ICONS[lowerNote];
   }
+
 
   if (lowerNote.includes('wood') || lowerNote.includes('cedar')) return '🪵';
   if (lowerNote.includes('flower') || lowerNote.includes('floral')) return '🌸';
@@ -72,28 +33,60 @@ const getIcon = (note: string) => {
   return '🌿';
 };
 
-  const DislikedNote = ({ note }: { note: string }) => (
-    <div className="flex items-center gap-2 bg-red-900/10 px-3 py-2 border border-red-400/20 hover:border-red-400/40 transition">
-      <span className="text-xl">{getIcon(note)}</span>
-      <span className="text-sm font-light text-red-300">{note}</span>
+const NoteSection = ({ 
+  title, 
+  description, 
+  notes 
+}: { 
+  title: string; 
+  description: string; 
+  notes: string[] 
+}) => (
+  <div className="text-center px-4 py-6">
+    <div className="mb-3">
+      <span className="text-xs uppercase tracking-wider text-[#e89a9c] font-light">{title}</span>
+      <p className="text-xs text-[#c98e8f]/70 mt-1">{description}</p>
     </div>
-  );
+    <div className="flex flex-wrap justify-center gap-2">
+      {notes.length > 0 ? (
+        notes.map((note, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-1.5 bg-white/10 px-2 py-1 text-xs"
+          >
+            <span role="img" aria-label={note}>{getIcon(note)}</span>
+            <span className="text-[#c98e8f]">{note}</span>
+          </div>
+        ))
+      ) : (
+        <p className="text-xs text-[#c98e8f]/50">No preferences yet</p>
+      )}
+    </div>
+  </div>
+);
+
+const DislikedNote = ({ note }: { note: string }) => (
+  <div className="flex items-center gap-2 bg-red-900/10 px-3 py-2">
+    <span role="img" aria-label={note} className="text-xl">{getIcon(note)}</span>
+    <span className="text-sm font-light text-red-300">{note}</span>
+  </div>
+);
+
+const ScentProfile: React.FC<ScentProfileProps> = ({ profile }) => {
+  const topNotes = useMemo(() => getTopNotes(profile?.top_notes), [profile?.top_notes]);
+  const heartNotes = useMemo(() => getTopNotes(profile?.heart_notes), [profile?.heart_notes]);
+  const baseNotes = useMemo(() => getTopNotes(profile?.base_notes), [profile?.base_notes]);
 
   return (
     <div className="space-y-8">
-      {/* Fragrance Pyramid */}
-      <div className="relative">
-        <h3 className="text-2xl font-light mb-8 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
-          Your Fragrance Pyramid
-        </h3>
-        
-        {/* Triangle Container with SVG Border */}
+      <section aria-labelledby="fragrance-pyramid-title">
+        <h3 id="fragrance-pyramid-title" className="sr-only">Fragrance Pyramid</h3>
         <div className="relative mx-auto" style={{ maxWidth: '500px' }}>
-          {/* SVG Triangle Outline */}
           <svg 
             viewBox="0 0 400 450" 
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ zIndex: 10 }}
+            aria-hidden="true"
           >
             <path
               d="M 200 20 L 380 430 L 20 430 Z"
@@ -102,80 +95,33 @@ const getIcon = (note: string) => {
               strokeWidth="2"
               opacity="0.6"
             />
-            {/* Horizontal dividers */}
             <line x1="110" y1="170" x2="290" y2="170" stroke="#c98e8f" strokeWidth="1" opacity="0.4" />
             <line x1="65" y1="300" x2="335" y2="300" stroke="#c98e8f" strokeWidth="1" opacity="0.4" />
           </svg>
 
-          {/* Content Sections */}
           <div className="relative" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
-            {/* Top Notes */}
-            <div className="text-center px-8 py-6 mb-4">
-              <div className="mb-3">
-                <span className="text-xs uppercase tracking-wider text-[#e89a9c] font-light">Top Notes</span>
-                <p className="text-xs text-[#c98e8f]/70 mt-1">First impression • 15-30 min</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {profile?.top_notes?.length ? (
-                  profile.top_notes.map((note, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-white/10 px-2 py-1 text-xs border border-white/20">
-                      <span>{getIcon(note)}</span>
-                      <span className="text-[#c98e8f]">{note}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-[#c98e8f]/50">No preferences yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Heart Notes */}
-            <div className="text-center px-6 py-6 mb-4">
-              <div className="mb-3">
-                <span className="text-xs uppercase tracking-wider text-[#e89a9c] font-light">Heart Notes</span>
-                <p className="text-xs text-[#c98e8f]/70 mt-1">Core character • 2-4 hours</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {profile?.heart_notes?.length ? (
-                  profile.heart_notes.map((note, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-white/10 px-2 py-1 text-xs border border-white/20">
-                      <span>{getIcon(note)}</span>
-                      <span className="text-[#c98e8f]">{note}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-[#c98e8f]/50">No preferences yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Base Notes */}
-            <div className="text-center px-4 py-6">
-              <div className="mb-3">
-                <span className="text-xs uppercase tracking-wider text-[#e89a9c] font-light">Base Notes</span>
-                <p className="text-xs text-[#c98e8f]/70 mt-1">Lasting foundation • 4+ hours</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {profile?.base_notes?.length ? (
-                  profile.base_notes.map((note, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-white/10 px-2 py-1 text-xs border border-white/20">
-                      <span>{getIcon(note)}</span>
-                      <span className="text-[#c98e8f]">{note}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-[#c98e8f]/50">No preferences yet</p>
-                )}
-              </div>
-            </div>
+            <NoteSection 
+              title="Top Notes" 
+              description="First impression • 15-30 min"
+              notes={topNotes}
+            />
+            <NoteSection 
+              title="Heart Notes" 
+              description="Core character • 2-4 hours"
+              notes={heartNotes}
+            />
+            <NoteSection 
+              title="Base Notes" 
+              description="Lasting foundation • 4+ hours"
+              notes={baseNotes}
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Disliked Notes */}
       {profile?.disliked_notes && profile.disliked_notes.length > 0 && (
-        <div className="border-t border-white/10 pt-6">
-          <h4 className="text-lg font-light mb-4 text-red-300" style={{ fontFamily: 'serif' }}>
+        <section className="border-t border-white/10 pt-6" aria-labelledby="disliked-notes-title">
+          <h4 id="disliked-notes-title" className="text-lg font-light mb-4 text-red-300" style={{ fontFamily: 'serif' }}>
             Notes to Avoid
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -183,26 +129,24 @@ const getIcon = (note: string) => {
               <DislikedNote key={i} note={note} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Preferred Families */}
       {profile?.preferred_families && profile.preferred_families.length > 0 && (
-        <div className="border-t border-white/10 pt-6">
-          <h4 className="text-lg font-light mb-4 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
+        <section className="border-t border-white/10 pt-6" aria-labelledby="preferred-families-title">
+          <h4 id="preferred-families-title" className="text-lg font-light mb-4 text-[#e89a9c]" style={{ fontFamily: 'serif' }}>
             Preferred Fragrance Families
           </h4>
           <div className="flex flex-wrap gap-2">
             {profile.preferred_families.map((family, i) => (
-              <span key={i} className="bg-[#c98e8f]/20 text-[#e89a9c] px-4 py-2 text-sm font-light border border-[#c98e8f]/30">
+              <span key={i} className="bg-[#c98e8f]/20 text-[#e89a9c] px-4 py-2 text-sm font-light">
                 {family}
               </span>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Additional Preferences */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/10 pt-6">
         {profile?.intensity_preference && (
           <div>

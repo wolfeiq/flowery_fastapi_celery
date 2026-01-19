@@ -2,21 +2,23 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useMe } from '@/hooks/useAuth';
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+
+  
+  const { data: user, isLoading } = useMe();
 
   useEffect(() => {
-    if (!loading) {
+    if (!isLoading) {
       if (user) {
         router.push('/dashboard');
       } else {
-        router.push('/login');
+        router.push('/marketing');
       }
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -24,3 +26,5 @@ export default function Home() {
     </div>
   );
 }
+
+

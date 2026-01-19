@@ -1,15 +1,40 @@
 'use client';
-import toast from 'react-hot-toast';
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
+import { useState, FormEvent, ChangeEvent } from 'react';
+import { useRegister } from '@/hooks/useAuth';
+import { useHumaneFont } from '@/hooks/humaneFonts';
+import AuthLayout from '@/components/AuthLayout';
+import AuthHeader from '@/components/AuthHeader';
+import AuthFooter from '@/components/AuthFooter';
+import ErrorMessage from '@/components/ErrorMessage';
+
+interface PasswordStrength {
+  hasMinLength: boolean;
+  hasUppercase: boolean;
+  hasNumber: boolean;
+}
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
-  const { register } = useAuth();
+  const [validationError, setValidationError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
+    hasMinLength: false,
+    hasUppercase: false,
+    hasNumber: false,
+  });
+  
+  const register = useRegister();
+
+  useHumaneFont();
+
+  const checkPasswordStrength = (pass: string): PasswordStrength => {
+    return {
+      hasMinLength: pass.length >= 8,
+      hasUppercase: /[A-Z]/.test(pass),
+      hasNumber: /[0-9]/.test(pass),
+    };
+  };
 
   const validatePassword = (pass: string): string | null => {
     if (pass.length < 8) return 'Password must be at least 8 characters';
@@ -18,155 +43,151 @@ export default function RegisterPage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    setValidationError('');
+    setPasswordStrength(checkPasswordStrength(newPassword));
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
+    setValidationError('');
     
     const passError = validatePassword(password);
     if (passError) {
-      setError(passError);
+      setValidationError(passError);
       return;
     }
 
-    try {
-      await register(email, password, fullName);
-      toast.success('Welcome!');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed');
-      toast.error(err.response?.data?.detail || 'Registration failed');
-    }
+    register.mutate({ 
+      email, 
+      password, 
+      full_name: fullName 
+    });
   };
 
+  const displayError = validationError || (register.isError 
+    ? (register.error.response?.data as any)?.detail || 'Registration failed'
+    : '');
+
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Hero with image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-neutral-100">
-        {/* Background image */}
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=2008" 
-            alt="Perfume composition"
-            className="w-full h-full object-cover opacity-90"
+    <AuthLayout>
+      <AuthHeader 
+        title="Create Account"
+        subtitle="Enter your details to get started"
+      />
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <ErrorMessage message={displayError} />
+        
+        <div>
+          <label htmlFor="fullName" className="block text-sm font-light text-white/80 mb-2">
+            Full Name
+          </label>
+          <input
+            id="fullName"
+            type="text"
+            value={fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              setValidationError('');
+            }}
+            placeholder="John Doe"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/40 focus:outline-none focus:border-[#c98e8f]/50 transition-colors"
+            required
+            disabled={register.isPending}
+            autoComplete="name"
           />
-          {/* Subtle overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-neutral-200/20 to-neutral-800/30"></div>
+        </div>
+
+        <div>
+          <label htmlFor="email" className="block text-sm font-light text-white/80 mb-2">
+            Email address
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setValidationError('');
+            }}
+            placeholder="hello@example.com"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/40 focus:outline-none focus:border-[#c98e8f]/50 transition-colors"
+            required
+            disabled={register.isPending}
+            autoComplete="email"
+          />
         </div>
         
-        {/* Logo top left */}
-        <div className="absolute top-8 left-8 z-10">
-          <p className="text-sm font-light tracking-wider text-neutral-800">SCENT MEMORY</p>
-        </div>
-
-        {/* Content bottom left */}
-        <div className="absolute bottom-8 left-8 z-10 text-neutral-800 max-w-md">
-          <h1 className="text-4xl font-light mb-4 leading-tight" style={{ fontFamily: 'serif' }}>
-            Begin Your Journey,<br />Create Your Story ✨
-          </h1>
-          <p className="text-sm font-light leading-relaxed opacity-80">
-            Together, we can craft a narrative that not only captivates but also leaves a 
-            lasting impression. Let's transform your story into something unforgettable.
-          </p>
-        </div>
-
-        {/* Copyright bottom right */}
-        <div className="absolute bottom-8 right-8 z-10">
-          <p className="text-xs text-neutral-700">© 2025 Scent Memory · All rights reserved</p>
-        </div>
-      </div>
-
-      {/* Right side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-neutral-50 px-8 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-12">
-            <p className="text-sm font-light tracking-wider text-neutral-800">SCENT MEMORY</p>
-          </div>
-
-          <div className="mb-10">
-            <h2 className="text-5xl font-light mb-4 text-neutral-800" style={{ fontFamily: 'serif' }}>
-              Create Account
-            </h2>
-            <p className="text-neutral-600 font-light">Enter your details to get started</p>
-          </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-light text-white/80 mb-2">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={handlePasswordChange}
+            placeholder="Create a password"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/40 focus:outline-none focus:border-[#c98e8f]/50 transition-colors"
+            minLength={8}
+            required
+            disabled={register.isPending}
+            autoComplete="new-password"
+          />
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm">
-                {error}
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-sm font-light text-neutral-700 mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 bg-white border border-neutral-300 rounded text-neutral-800 placeholder-neutral-400 focus:outline-none focus:border-neutral-600 transition-colors"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-light text-neutral-700 mb-2">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="hello@example.com"
-                className="w-full px-4 py-3 bg-white border border-neutral-300 rounded text-neutral-800 placeholder-neutral-400 focus:outline-none focus:border-neutral-600 transition-colors"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-light text-neutral-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password"
-                className="w-full px-4 py-3 bg-white border border-neutral-300 rounded text-neutral-800 placeholder-neutral-400 focus:outline-none focus:border-neutral-600 transition-colors"
-                minLength={8}
-                required
-              />
-              <p className="text-xs text-neutral-500 mt-2 font-light">
-                Minimum 8 characters, 1 uppercase, 1 number
-              </p>
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full bg-neutral-800 text-white py-3 rounded hover:bg-neutral-900 transition font-light tracking-wide"
-            >
-              Create Account
-            </button>
-          </form>
-          
-          <p className="text-center mt-8 text-neutral-600 font-light text-sm">
-            Already have an account?{' '}
-            <Link href="/login" className="text-neutral-800 hover:text-neutral-900 font-normal transition">
-              Login
-            </Link>
-          </p>
-
-          {/* Navigation links */}
-          <div className="mt-12 pt-8 border-t border-neutral-200 space-y-2">
-            <a href="#" className="block text-sm font-light text-neutral-600 hover:text-neutral-900 transition">Home</a>
-            <a href="#" className="block text-sm font-light text-neutral-600 hover:text-neutral-900 transition">Services</a>
-            <a href="#" className="block text-sm font-light text-neutral-600 hover:text-neutral-900 transition">News</a>
-            <a href="#" className="block text-sm font-light text-neutral-600 hover:text-neutral-900 transition">Projects</a>
-            <a href="#" className="block text-sm font-light text-neutral-600 hover:text-neutral-900 transition">Contact</a>
+          <div className="mt-3 space-y-1">
+            <PasswordRequirement 
+              met={passwordStrength.hasMinLength} 
+              text="At least 8 characters"
+            />
+            <PasswordRequirement 
+              met={passwordStrength.hasUppercase} 
+              text="One uppercase letter"
+            />
+            <PasswordRequirement 
+              met={passwordStrength.hasNumber} 
+              text="One number"
+            />
           </div>
         </div>
+        
+        <button
+          type="submit"
+          disabled={register.isPending}
+          aria-busy={register.isPending}
+          className="w-full bg-[#c69193] hover:bg-[#d4a5a7] text-white py-3 rounded transition font-light tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {register.isPending ? 'Creating Account...' : 'Create Account'}
+        </button>
+      </form>
+      
+      <AuthFooter 
+        text="Already have an account?"
+        linkText="Login"
+        linkHref="/login"
+      />
+    </AuthLayout>
+  );
+}
+
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+        met ? 'bg-green-500/20' : 'bg-white/5'
+      }`}>
+        {met && (
+          <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
       </div>
+      <span className={met ? 'text-green-400/80' : 'text-white/40'}>
+        {text}
+      </span>
     </div>
   );
 }

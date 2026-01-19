@@ -32,12 +32,16 @@ Always return your analysis in valid JSON format with these exact fields:
 - top_notes: List[str]
 - heart_notes: List[str]
 - base_notes: List[str]
-- color: str
+- color: str (hex color code)
 - emotion: string
 - scent_family: str
 
+Return the color strictly as a HEX value in the format "#RRGGBB". One color only.
+Do NOT return color names, descriptions, or words.
+If you cannot determine the color, return "#FFB6C1".
+
 Example response:
-{
+{{
   "image_description": "A luxurious living room sofa with gold accents against a dark background of a wall with an antique painting",
   "brand": "Dior",
   "scent_name": "Sauvage",
@@ -47,7 +51,7 @@ Example response:
   "color": "#2C3E50",
   "emotion": "confident",
   "scent_family": "woody aromatic"
-}"""
+}}"""
 
 def analyze_image(image_bytes: bytes, content: str, emotion: str, occasion: str) -> dict:
     logger.info("Vision API call started")

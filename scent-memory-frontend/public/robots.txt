@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+Crawl-delay: 1
+
+
+Sitemap: https://scentmemory.com/sitemap.xml

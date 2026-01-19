@@ -30,11 +30,16 @@ from app.services.cache import invalidate_user_recommendations
 
 #with cache invalidation
 
+#force_failure: bool = True
 @celery_app.task
 def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
     db = SessionLocal()
     
     try:
+     
+        ##if force_failure or memory_id.startswith("test-fail-"):
+            ##raise Exception("Test failure: This is a simulated error for testing")
+
         memory = db.query(ScentMemory).get(memory_id)
         
         if not memory:
@@ -55,10 +60,8 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
                 
             
             elif file_data["content_type"] == "application/pdf":
-                print(f"Processing PDF for memory {memory_id}")
                 
                 extracted_text = extract_text_from_pdf(file_bytes)
-                print(f"Extracted {len(extracted_text)} characters from PDF")
                 original_content = memory.content
                 if extracted_text:
                     memory.content = f"{memory.content}\n\nAttached PDF Content:\n{extracted_text}"         
@@ -90,10 +93,10 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
         result = r.publish("memory_events", json.dumps(message))
     
         if result == 0:
-            print("No subscribers listening to memory_events!")
+            logger.info("No subscribers listening to memory_events!")
 
         r.close()
-        print(f"Successfully processed memory {memory_id}")
+
         
     except Exception as e:
         db.rollback()
@@ -112,17 +115,18 @@ def process_memory_task(memory_id: str, user_id: str, file_data: dict = None):
         except:
             pass
         r = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
-        
+        error_message = str(e)[:500]
         message = {
             "user_id": user_id,
             "event": "memory_failed",
             "memory_id": memory_id,
+            "error": error_message,
         }
         
         result = r.publish("memory_events", json.dumps(message))
     
         if result == 0:
-            print("No subscribers listening to memory_events!")
+            logger.info("No subscribers listening to memory_events!")
 
         r.close()
         raise
@@ -153,15 +157,9 @@ def process_image(memory: ScentMemory, db, file_bytes) -> str:
     db.flush()  
     enhanced_content = f"{memory.content}\n\nAttached image description: {vision_result.get('image_description')}"
 
-
-    print(f"Created ExtractedScent: {extracted.id}")
-    print(f"process_text called for {memory.id}")
-    print(f"Content length: {len(enhanced_content)}")
-
     update_scent_profile(memory.user_id, vision_result, memory, db)
     
     chunks = [enhanced_content[i:i+500] for i in range(0, len(enhanced_content), 450)]
-    print(f"Created {len(chunks)} chunks")
 
     for idx, chunk_text in enumerate(chunks):
         embedding = generate_embedding(chunk_text)
@@ -181,22 +179,18 @@ def process_image(memory: ScentMemory, db, file_bytes) -> str:
         
         chunk.vector_id = str(chunk.id)
     
-    print(f"Completed processing for memory {memory.id}")
+
     return vision_result.get('image_description', '') 
 
 
 
 def process_text(memory: ScentMemory, db) -> str:
-
-    print(f"process_text called for {memory.id}")
-    print(f"Content length: {len(memory.content)}")
-
     #summary = generate_summary(memory.content, user_context=memory.title)
     #memory.summary = summary
     #print(f"Generated summary: {summary[:100]}...")
     
     scent_data = extract_scents(memory.content, memory.emotion, memory.occasion)
-    print(f"Extracted scents: {scent_data}")
+
 
     extracted = ExtractedScent(
         memory_id=memory.id,
@@ -216,13 +210,13 @@ def process_text(memory: ScentMemory, db) -> str:
         
     db.add(extracted)
     db.flush()
-    print(f"Created ExtractedScent: {extracted.id}")
+
     enhanced_content = f"{memory.content}\n\nMemory description: {scent_data.get('description')}"
 
     update_scent_profile(memory.user_id, scent_data, memory, db)
     
     chunks = [enhanced_content[i:i+500] for i in range(0, len(enhanced_content), 450)]
-    print(f"Created {len(chunks)} chunks")
+
 
     for idx, chunk_text in enumerate(chunks):
         embedding = generate_embedding(chunk_text)
@@ -241,8 +235,7 @@ def process_text(memory: ScentMemory, db) -> str:
         )
         
         chunk.vector_id = str(chunk.id)
-    
-    print(f"Completed processing for memory {memory.id}")
+
     return scent_data.get('description', '') 
 
 

@@ -1,3 +1,4 @@
+from venv import logger
 import pdfplumber
 from io import BytesIO
 
@@ -16,5 +17,5 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
         return "\n\n".join(text_content)
     
     except Exception as e:
-        print(f"PDF extraction error: {e}")
+        logger.info(f"PDF extraction error: {e}")
         return ""

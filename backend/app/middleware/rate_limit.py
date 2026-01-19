@@ -1,4 +1,5 @@
-from fastapi import Request, HTTPException
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta, date
 import redis
 import logging
@@ -9,7 +10,6 @@ logger = logging.getLogger(__name__)
 redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 def get_user_id_from_token(request: Request) -> str | None:
-    """Extract user ID from JWT token in Authorization header"""
     try:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
@@ -22,7 +22,6 @@ def get_user_id_from_token(request: Request) -> str | None:
         return None
 
 def get_user_id_from_request(request: Request) -> str | None:
-    """Get user ID from request state or JWT token"""
     user_id = getattr(request.state, "user_id", None)
     if not user_id:
         user_id = get_user_id_from_token(request)
@@ -64,32 +63,46 @@ def increment_rate_limit(key: str, window_seconds: int):
     except Exception as e:
         logger.warning(f"Failed to increment rate limit: {e}")
 
+def create_rate_limit_response(status_code: int, content: dict):
+    response = JSONResponse(
+        status_code=status_code,
+        content=content
+    )
+
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
 async def rate_limit_middleware(request: Request, call_next):
-    # Skip rate limiting for these paths
+
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     skip_paths = ["/", "/health", "/docs", "/openapi.json", "/api/auth/login", "/api/auth/register"]
     if request.url.path in skip_paths or "/admin/" in request.url.path:
         return await call_next(request)
     
     user_id = get_user_id_from_request(request)
     
-    # 1. Memory Upload Rate Limit (3 per day)
     if request.url.path == "/api/memories/upload" and request.method == "POST":
         if user_id:
             today = date.today().isoformat()
             key = f"upload_limit:{user_id}:{today}"
             
-            limit_check = check_rate_limit(key, limit=100, window_seconds=86400)
+            limit_check = check_rate_limit(key, limit=3, window_seconds=86400)
             
             if not limit_check["allowed"]:
-                raise HTTPException(
+                return create_rate_limit_response(
                     status_code=429,
-                    detail={
-                        "error": "Daily upload limit reached",
-                        "message": "You can upload a maximum of 3 memories per day. Try again tomorrow!",
-                        "limit": 10,
-                        "used": limit_check["used"],
-                        "remaining": 0,
-                        "reset_at": limit_check["reset_at"]
+                    content={
+                        "detail": {
+                            "error": "Daily upload limit reached",
+                            "message": "You can upload a maximum of 3 memories per day. Try again tomorrow!",
+                            "limit": limit_check["limit"],
+                            "used": limit_check["used"],
+                            "remaining": 0,
+                            "reset_at": limit_check["reset_at"]
+                        }
                     }
                 )
             
@@ -100,27 +113,27 @@ async def rate_limit_middleware(request: Request, call_next):
             
             return response
         
-        # No user_id - let endpoint handle auth
         return await call_next(request)
     
-    # 2. Query Rate Limit (10 per day)
     if request.url.path == "/api/query/search" and request.method == "POST":
         if user_id:
             today = date.today().isoformat()
             key = f"query_limit:{user_id}:{today}"
             
-            limit_check = check_rate_limit(key, limit=10, window_seconds=86400)
+            limit_check = check_rate_limit(key, limit=4, window_seconds=86400)
             
             if not limit_check["allowed"]:
-                raise HTTPException(
+                return create_rate_limit_response(
                     status_code=429,
-                    detail={
-                        "error": "Daily query limit reached",
-                        "message": "You can make a maximum of 10 queries per day. Try again tomorrow!",
-                        "limit": 10,
-                        "used": limit_check["used"],
-                        "remaining": 0,
-                        "reset_at": limit_check["reset_at"]
+                    content={
+                        "detail": {
+                            "error": "Daily query limit reached",
+                            "message": "You can make a maximum of 4 queries per day. Try again tomorrow!",
+                            "limit": limit_check["limit"],
+                            "used": limit_check["used"],
+                            "remaining": 0,
+                            "reset_at": limit_check["reset_at"]
+                        }
                     }
                 )
             
@@ -133,7 +146,6 @@ async def rate_limit_middleware(request: Request, call_next):
         
         return await call_next(request)
     
-    # 3. Profile Update Rate Limit (1 per day)
     if request.url.path.startswith("/api/profile") and request.method in ["PUT", "PATCH", "POST"]:
         if user_id:
             today = date.today().isoformat()
@@ -142,15 +154,17 @@ async def rate_limit_middleware(request: Request, call_next):
             limit_check = check_rate_limit(key, limit=1, window_seconds=86400)
             
             if not limit_check["allowed"]:
-                raise HTTPException(
+                return create_rate_limit_response(
                     status_code=429,
-                    detail={
-                        "error": "Daily profile update limit reached",
-                        "message": "You can update your profile once per day. Try again tomorrow!",
-                        "limit": 1,
-                        "used": limit_check["used"],
-                        "remaining": 0,
-                        "reset_at": limit_check["reset_at"]
+                    content={
+                        "detail": {
+                            "error": "Daily profile update limit reached",
+                            "message": "You can update your profile once per day. Try again tomorrow!",
+                            "limit": limit_check["limit"],
+                            "used": limit_check["used"],
+                            "remaining": 0,
+                            "reset_at": limit_check["reset_at"]
+                        }
                     }
                 )
             
@@ -163,16 +177,17 @@ async def rate_limit_middleware(request: Request, call_next):
         
         return await call_next(request)
     
-    # 4. General IP-based Rate Limit (100 per minute)
     client_ip = request.client.host
     key = f"rate_limit:{client_ip}"
     
     limit_check = check_rate_limit(key, limit=settings.RATE_LIMIT_PER_MINUTE, window_seconds=60)
     
     if not limit_check["allowed"]:
-        raise HTTPException(
+        return create_rate_limit_response(
             status_code=429,
-            detail="Too many requests. Please try again later."
+            content={
+                "detail": "Too many requests. Please try again later."
+            }
         )
     
     response = await call_next(request)

@@ -11,15 +11,7 @@ from .middleware.logging_middleware import log_requests
 from .api import auth, memories, query, profile, fine_tuning, music, health
 import asyncio
 from .websockets.redis_listener import redis_listener
-
-
-#from fastapi import WebSocket, WebSocketDisconnect
-#from .websocket import manager
 from .websockets.routes import router as websocket_router
-#from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-
-#Will deploy with nginx + SSL certificate -> with Docker
-
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -37,20 +29,21 @@ if settings.ENVIRONMENT == "production" and settings.SENTRY_DSN:
             RedisIntegration(),
             CeleryIntegration()
         ],
-        traces_sample_rate=0.1,  # 10% of requests for performance monitoring
+        traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
-        send_default_pii=False  # Don't send user data
+        send_default_pii=False
     )
+
 logger = setup_logging()
 
-#sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 app = FastAPI(
     title="Scent Memory API",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url=None
 )
 
-app.middleware("http")(log_requests)
+app.middleware("http")(rate_limit_middleware)
+
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
@@ -62,27 +55,23 @@ async def add_security_headers(request, call_next):
     return response
 
 
+app.middleware("http")(log_requests)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],  # Changed to * to allow OPTIONS
     allow_headers=["*"],
     max_age=600
 )
-
-app.middleware("http")(rate_limit_middleware)
 
 if settings.ENVIRONMENT == "production":
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["api.scentmemory.com", "*.scentmemory.com"]
     )
-
-#if settings.ENVIRONMENT == "production":
-    #app.add_middleware(HTTPSRedirectMiddleware)
-
-#app.mount("/ws", socket_app)
 
 @app.on_event("startup")
 async def start_redis_listener():
@@ -91,16 +80,10 @@ async def start_redis_listener():
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
-#app.include_router(spotify.router, prefix="/api/spotify", tags=["spotify"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(rate_limits.router, prefix="/api", tags=["rate-limits"])
 app.include_router(health.router, prefix="/api", tags=["health"])
-#app.include_router(fine_tuning.router, prefix="/api/fine-tuning", tags=["fine-tuning"])
-#app.include_router(music.router, prefix="/api/v1/music", tags=["music"])
 app.include_router(websocket_router)
-
-#app.mount("/ws", socket_app)
-#app = socketio.ASGIApp(sio, app)
 
 @app.get("/")
 def root():

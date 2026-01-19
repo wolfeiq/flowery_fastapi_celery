@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import validator
+from typing import List
 
 class Settings(BaseSettings):
     ADMIN_EMAILS: str = ""
@@ -19,9 +20,18 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     RATE_LIMIT_PER_MINUTE: int = 100 
     UPLOAD_LIMIT_PER_DAY: int = 3
-    QUERY_LIMIT_PER_DAY: int = 10
+    QUERY_LIMIT_PER_DAY: int = 4
     PROFILE_UPDATE_LIMIT_PER_DAY: int = 1
 
+    @property
+    def cors_origins(self) -> List[str]:
+        if self.ENVIRONMENT == "production":
+            return [
+                "https://thescentmemory.com",
+            ]
+        else:
+            return ["http://localhost:3000", "http://localhost:5173"] 
+        
     @property
     def admin_email_list(self) -> list[str]:
         return [e.strip() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
@@ -40,3 +50,7 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings = Settings()
+
+
+
+

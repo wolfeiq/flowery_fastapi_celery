@@ -33,6 +33,11 @@ Always return your analysis in valid JSON format with these exact fields:
 - emotion: string
 - scent_family: str
 
+
+Return the color strictly as a HEX value in the format "#RRGGBB". One color only.
+Do NOT return color names, descriptions, or words.
+If you cannot determine the color, return "#FFB6C1".
+
 Example response:
 {{
   "description": "A memory of a peaceful rainy afternoon spent reading by the window, with notes of petrichor and paper evoking a contemplative mood",
