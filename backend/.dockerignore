@@ -80,7 +80,6 @@ Dockerfile*
 
 
 scripts/dev/
-*.sh
 Makefile
 node_modules/
 npm-debug.log
