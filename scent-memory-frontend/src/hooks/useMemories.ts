@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
-import { memoriesApi, Memory } from '@/lib/api';
+import { memoriesApi, Memory, MemoryUploadResponse } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { AxiosError } from 'axios';
 
@@ -23,10 +23,10 @@ export function useMemory(id: string): UseQueryResult<Memory, AxiosError> {
     enabled: !!id,
   });
 }
-export function useUploadMemory(): UseMutationResult<Memory, AxiosError, FormData> {
+export function useUploadMemory(): UseMutationResult<MemoryUploadResponse, AxiosError, FormData> {
   const queryClient = useQueryClient();
 
-  return useMutation<Memory, AxiosError, FormData>({
+  return useMutation<MemoryUploadResponse, AxiosError, FormData>({
     mutationFn: memoriesApi.upload,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: memoryKeys.lists() });
