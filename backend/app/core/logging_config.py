@@ -1,53 +1,36 @@
 import logging
-from logging.handlers import RotatingFileHandler
 import sys
+from app.core.config import settings
 
 def setup_logging():
-
-    import os
-    os.makedirs("logs", exist_ok=True)
+    """
+    Setup logging configuration.
+    For production/Railway, logs go to stdout (Railway captures these).
+    For development, you can add file handlers if needed.
+    """
     
+    # Set log level based on environment
+    log_level = logging.DEBUG if settings.DEBUG else logging.INFO
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    
+    # Create and return logger for the app
     logger = logging.getLogger("scent_memory")
-    logger.setLevel(logging.INFO)
-    
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_format = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    console_handler.setFormatter(console_format)
-    
-
-    file_handler = RotatingFileHandler(
-        'logs/app.log',
-        maxBytes=10*1024*1024, 
-        backupCount=5
-    )
-    file_handler.setLevel(logging.INFO)
-    file_format = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
-    )
-    file_handler.setFormatter(file_format)
-    
-
-    error_handler = RotatingFileHandler(
-        'logs/error.log',
-        maxBytes=10*1024*1024,
-        backupCount=5
-    )
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(file_format)
-    
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-    logger.addHandler(error_handler)
+    logger.setLevel(log_level)
     
     return logger
 
+# Create audit logger that also goes to stdout
 audit_logger = logging.getLogger("security_audit")
 audit_logger.setLevel(logging.INFO)
-audit_handler = RotatingFileHandler('logs/security.log', maxBytes=10*1024*1024, backupCount=10)
+audit_handler = logging.StreamHandler(sys.stdout)
 audit_handler.setFormatter(logging.Formatter(
     '%(asctime)s - SECURITY - %(message)s'
 ))
