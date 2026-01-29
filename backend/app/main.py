@@ -88,7 +88,6 @@ app.add_middleware(
     max_age=600
 )
 
-
 if settings.is_production():
     app.add_middleware(
         TrustedHostMiddleware,
@@ -96,9 +95,11 @@ if settings.is_production():
             "api.thescentmemory.com", 
             "thescentmemory.com",
             "*.thescentmemory.com",
+            "floweryfastapicelery-production.up.railway.app",
+            "localhost",
+            "127.0.0.1",
         ]
     )
-
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(memories.router, prefix="/api/memories", tags=["memories"])
