@@ -17,15 +17,18 @@ import Footer from '@/components/Footer';
 export default function Dashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [token, setToken] = useState<string | undefined>(undefined);
   const { data: user, isLoading: loadingAuth, error: authError } = useMe();
   const logout = useLogout();
   const { data: memories = [], isLoading: loadingMemories, refetch: refetchMemories } = useMemories();
   const { data: scentProfile, isLoading: loadingProfile } = useProfile();
-  
-  useWebSocket(user?.id);
+
+  useWebSocket(user?.id, token);
   useHumaneFont();
   useEffect(() => {
     setMounted(true);
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) setToken(storedToken);
   }, []);
   
 

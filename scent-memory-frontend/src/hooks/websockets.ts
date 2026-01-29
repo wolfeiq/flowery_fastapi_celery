@@ -9,14 +9,14 @@ interface WebSocketMessage {
   error?: string;
 }
 
-export function useWebSocket(userId?: string): MutableRefObject<WebSocket | null> {
+export function useWebSocket(userId?: string, token?: string): MutableRefObject<WebSocket | null> {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isCleaningUpRef = useRef(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !token) return;
 
     isCleaningUpRef.current = false;
 
@@ -30,7 +30,7 @@ export function useWebSocket(userId?: string): MutableRefObject<WebSocket | null
 
       try {
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL!;
-        const ws = new WebSocket(`${wsUrl}/ws/${userId}`);
+        const ws = new WebSocket(`${wsUrl}/ws/${userId}?token=${encodeURIComponent(token)}`);
         wsRef.current = ws;
 
         ws.onmessage = (event) => {
@@ -75,7 +75,7 @@ export function useWebSocket(userId?: string): MutableRefObject<WebSocket | null
         wsRef.current = null;
       }
     };
-  }, [userId, queryClient]);
+  }, [userId, token, queryClient]);
 
   return wsRef;
 }
