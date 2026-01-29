@@ -12,7 +12,7 @@ from ..schemas.common import CacheStats, CacheStatsError
 
 logger = logging.getLogger(__name__)
 
-redis_client: redis.Redis[str] = redis.Redis.from_url(
+redis_client: redis.Redis = redis.Redis.from_url(  # type: ignore[type-arg]
     settings.redis_url_computed,
     decode_responses=True,
     socket_connect_timeout=5,
