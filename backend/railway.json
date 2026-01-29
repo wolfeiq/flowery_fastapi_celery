@@ -5,7 +5,6 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "/app/docker-entrypoint.sh",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
