@@ -9,10 +9,7 @@ _genius_client: Optional[lyricsgenius.Genius] = None
 
 
 def get_genius_client() -> lyricsgenius.Genius:
-    """
-    Lazy-load the Genius client only when needed.
-    Raises ValueError if token is not configured.
-    """
+
     global _genius_client
     
     if _genius_client is None:
@@ -27,19 +24,6 @@ def get_genius_client() -> lyricsgenius.Genius:
 
 
 def search_and_analyze_song(song_name: str, artist_name: str = None):
-    """
-    Search for a song on Genius and analyze it.
-    
-    Args:
-        song_name: Name of the song to search for
-        artist_name: Optional artist name to narrow search
-    
-    Returns:
-        Dictionary with song information and lyrics
-        
-    Raises:
-        ValueError: If GENIUS_ACCESS_TOKEN is not configured
-    """
     try:
         genius = get_genius_client()
         
@@ -78,4 +62,3 @@ def search_and_analyze_song(song_name: str, artist_name: str = None):
         }
 
 
-# Add any other music-related functions here

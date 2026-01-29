@@ -22,6 +22,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN apt-get update && apt-get install -y \
     libpq5 \
     postgresql-client \
+    redis-tools \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -30,7 +31,7 @@ COPY --from=builder /root/.local /home/appuser/.local
 COPY --chown=appuser:appuser . .
 
 
-RUN chmod +x /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh /app/celery-entrypoint.sh
 
 
 ENV PATH=/home/appuser/.local/bin:$PATH \

@@ -1,7 +1,14 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!API_BASE_URL) {
+  throw new Error(
+    'NEXT_PUBLIC_API_URL environment variable is not defined. ' +
+    'Please set it in your .env.local file.'
+  );
+}
 
 
 export interface NoteCount {
@@ -13,9 +20,9 @@ export interface Profile {
   intensity_preference?: string;
   budget_range?: string;
   disliked_notes?: string[];
-  top_notes?: NoteCount[];       
-  heart_notes?: NoteCount[];     
-  base_notes?: NoteCount[];      
+  top_notes?: NoteCount[];
+  heart_notes?: NoteCount[];
+  base_notes?: NoteCount[];
   preferred_families?: string[];
   emotional_preferences?: string[];
 }
@@ -29,9 +36,9 @@ export interface UpdateProfileRequest {
   intensity_preference?: string;
   budget_range?: string;
   disliked_notes?: string[];
-  top_notes?: NoteCount[];    
-  heart_notes?: NoteCount[];     
-  base_notes?: NoteCount[];      
+  top_notes?: NoteCount[];
+  heart_notes?: NoteCount[];
+  base_notes?: NoteCount[];
   preferred_families?: string[];
   emotional_preferences?: string[];
 }
@@ -51,19 +58,88 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface ApiErrorResponse {
-  detail?: string | { message: string; error: string; reset_at?: string };
+  detail?: string | RateLimitError;
 }
 
 export interface RateLimitError {
   message: string;
   error: string;
   reset_at?: string;
+  limit?: number;
+  used?: number;
+  remaining?: number;
 }
 
+export interface ExtractedScent {
+  scent_name: string;
+  brand?: string;
+  scent_family?: string;
+  top_notes?: string[];
+  heart_notes?: string[];
+  base_notes?: string[];
+  color?: string;
+  emotion?: string;
+  confidence: number;
+}
+
+export type MemoryType = 'text' | 'photo' | 'pdf';
+
+export interface Memory {
+  id: string;
+  title: string;
+  content?: string;
+  occasion: string;
+  memory_type: MemoryType | string;
+  emotion?: string;
+  processed: boolean;
+  created_at: string;
+  file_path?: string;
+  file_type?: string;
+  extracted_scents?: ExtractedScent[];
+}
+
+export interface MemoryUploadResponse {
+  id: string;
+  title: string;
+  status: 'processing' | 'completed' | 'failed';
+}
+
+export interface SearchResult {
+  query_id: string;
+  response: string;
+  sources: string[];
+  cached?: boolean;
+}
+
+export interface FeedbackRequest {
+  rating: number;
+  feedback_text?: string;
+  disliked_notes?: string[];
+}
+
+export interface FeedbackResponse {
+  status: string;
+}
+
+export interface MusicLink {
+  memory_id: string;
+  artist_name: string;
+  track_name: string;
+  spotify_url?: string;
+}
+
+export interface MusicLinkResponse {
+  id: string;
+  memory_id: string;
+  artist_name: string;
+  track_name: string;
+  spotify_url?: string;
+  lyrics?: string;
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -73,13 +149,15 @@ export const api = axios.create({
 });
 
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
-  
+
   return config;
 });
 
@@ -89,14 +167,14 @@ api.interceptors.response.use(
   (error: AxiosError<ApiErrorResponse>) => {
     if (error.response?.status === 429) {
       const detail = error.response.data?.detail;
-      
+
       if (detail && typeof detail === 'object') {
         const rateLimitError = detail as RateLimitError;
         toast.error(rateLimitError.message || rateLimitError.error, {
           duration: 5000,
           icon: '⏱️',
         });
-        
+
         if (rateLimitError.reset_at) {
           const resetTime = new Date(rateLimitError.reset_at).toLocaleTimeString();
           toast(`Limit resets at ${resetTime}`, { duration: 3000 });
@@ -117,121 +195,84 @@ api.interceptors.response.use(
     } else if (error.response?.status && error.response.status >= 500) {
       toast.error('Server error. Please try again later.');
     }
-    
+
     return Promise.reject(error);
   }
 );
 
+
 export const authApi = {
   register: (data: RegisterRequest): Promise<LoginResponse> =>
-    api.post<LoginResponse>('/auth/register', data).then(res => res.data),
-  
-  login: (email: string, password: string): Promise<LoginResponse> =>
-    api.post<LoginResponse>('/auth/login', new URLSearchParams({ username: email, password }), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    }).then(res => {
-      return res.data;
-    }),
-  
-  getMe: async (): Promise<User> => {
-    try {
-      const response = await api.get<User>('/auth/me');
+    api.post<LoginResponse>('/auth/register', data).then((res) => res.data),
 
-      if (!response.data) {
-        throw new Error('No user data in response');
-      }
-      
-      return response.data;
-    } catch (error) {
-      throw error;
+  login: (email: string, password: string): Promise<LoginResponse> =>
+    api
+      .post<LoginResponse>(
+        '/auth/login',
+        new URLSearchParams({ username: email, password }),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        }
+      )
+      .then((res) => res.data),
+
+  getMe: async (): Promise<User> => {
+    const response = await api.get<User>('/auth/me');
+
+    if (!response.data) {
+      throw new Error('No user data in response');
     }
+
+    return response.data;
   },
 };
 
-
 export const memoriesApi = {
-  upload: (formData: FormData): Promise<Memory> =>
-    api.post<Memory>('/memories/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }).then(res => res.data),
-  
-  list: (): Promise<Memory[]> => 
-    api.get<Memory[]>('/memories/').then(res => res.data),
-  
-  get: (id: string): Promise<Memory> => 
-    api.get<Memory>(`/memories/${id}`).then(res => res.data),
+  upload: (formData: FormData): Promise<MemoryUploadResponse> =>
+    api
+      .post<MemoryUploadResponse>('/memories/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data),
+
+  list: (): Promise<Memory[]> =>
+    api.get<Memory[]>('/memories/').then((res) => res.data),
+
+  get: (id: string): Promise<Memory> =>
+    api.get<Memory>(`/memories/${id}`).then((res) => res.data),
+
+  delete: (id: string): Promise<void> =>
+    api.delete(`/memories/${id}`).then(() => undefined),
 };
-
-
-export interface SearchResult {
-  query_id: string;
-  response: string; 
-  results: any[]; 
-}
-
-export interface FeedbackRequest {
-  rating: number;
-  feedback_text?: string;
-  disliked_notes?: string[];
-}
 
 export const queryApi = {
   search: (query: string): Promise<SearchResult> =>
-    api.post<SearchResult>('/query/search', { query }).then(res => res.data),
-  
-  feedback: (queryId: string, feedback: FeedbackRequest): Promise<void> =>
-    api.post(`/query/${queryId}/feedback`, feedback).then(res => res.data),
-};
+    api.post<SearchResult>('/query/search', { query }).then((res) => res.data),
 
+  feedback: (queryId: string, feedback: FeedbackRequest): Promise<FeedbackResponse> =>
+    api
+      .post<FeedbackResponse>(`/query/${queryId}/feedback`, feedback)
+      .then((res) => res.data),
+};
 
 export const profileApi = {
-  get: (): Promise<Profile> => 
-    api.get<Profile>('/profile/me').then(res => res.data),
-  
-  update: (data: UpdateProfileRequest): Promise<Profile> => 
-    api.put<Profile>('/profile/me', data).then(res => res.data),
-  
-  stats: (): Promise<ProfileStats> => 
-    api.get<ProfileStats>('/profile/stats').then(res => res.data),
-};
+  get: (): Promise<Profile> =>
+    api.get<Profile>('/profile/me').then((res) => res.data),
 
-export interface MusicLink {
-  memory_id: string;
-  artist_name: string;
-  track_name: string;
-  spotify_url?: string;
-}
+  update: (data: UpdateProfileRequest): Promise<Profile> =>
+    api.put<Profile>('/profile/me', data).then((res) => res.data),
+
+  stats: (): Promise<ProfileStats> =>
+    api.get<ProfileStats>('/profile/stats').then((res) => res.data),
+};
 
 export const musicApi = {
-  link: (data: MusicLink): Promise<any> =>
-    api.post('/v1/music/link', data).then(res => res.data),
-  
-  getForMemory: (memoryId: string): Promise<any> => 
-    api.get(`/v1/music/memory/${memoryId}`).then(res => res.data),
+  link: (data: MusicLink): Promise<MusicLinkResponse> =>
+    api.post<MusicLinkResponse>('/v1/music/link', data).then((res) => res.data),
+
+  getForMemory: (memoryId: string): Promise<MusicLinkResponse | null> =>
+    api
+      .get<MusicLinkResponse>(`/v1/music/memory/${memoryId}`)
+      .then((res) => res.data)
+      .catch(() => null),
 };
-
-export interface ExtractedScent {
-  scent_name: string;
-  brand?: string;
-  scent_family?: string;
-  top_notes?: string[];
-  heart_notes?: string[];
-  base_notes?: string[];
-  color?: string;
-  emotion?: string;
-  confidence: number;
-}
-
-export interface Memory {
-  id: string;
-  title: string;             
-  content?: string;
-  occasion: string;
-  memory_type: string;
-  emotion?: string;
-  processed: boolean;
-  created_at: string;
-  file_path?: string;
-  file_type?: string;
-  extracted_scents?: ExtractedScent[];
-}

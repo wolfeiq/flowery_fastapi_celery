@@ -17,7 +17,6 @@ from .websockets.redis_listener import redis_listener
 from .websockets.routes import router as websocket_router
 
 
-#error tracking
 if settings.is_production() and settings.SENTRY_DSN:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,

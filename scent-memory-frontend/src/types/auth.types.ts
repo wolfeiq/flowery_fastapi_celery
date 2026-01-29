@@ -1,45 +1,22 @@
-export interface ApiErrorResponse {
-  response?: {
-    data?: {
-      detail?: string;
-    };
-    status?: number;
-  };
-  message?: string;
-  code?: string;
-}
+import type { User } from '@/lib/api';
+
+export type {
+  User,
+  RegisterRequest,
+  LoginResponse,
+  ApiErrorResponse,
+  RateLimitError,
+} from '@/lib/api';
 
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  full_name: string;
-}
-
 export interface AuthResponse {
   access_token: string;
   token_type: string;
   user: User;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  created_at: string;
-}
-
-export interface UseMutationResult<TData, TError, TVariables> {
-  mutate: (variables: TVariables) => void;
-  isPending: boolean;
-  isError: boolean;
-  isSuccess: boolean;
-  error: TError | null;
-  data: TData | undefined;
 }
 
 export interface PasswordValidation {
@@ -52,4 +29,18 @@ export interface PasswordStrength {
   hasUppercase: boolean;
   hasNumber: boolean;
   hasSpecialChar?: boolean;
+}
+
+export interface AuthContextType {
+  user: User | null | undefined;
+  loading: boolean;
+  logout: () => void;
+}
+
+export type AuthStatus = 'authenticated' | 'unauthenticated' | 'loading';
+
+export interface AuthState {
+  user: User | null;
+  status: AuthStatus;
+  error: string | null;
 }

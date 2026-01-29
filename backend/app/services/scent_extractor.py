@@ -1,17 +1,20 @@
-from openai import OpenAI
-from ..core.config import settings
+
 import json
 import logging
+from typing import Optional
+
+from openai import OpenAI
+
+from ..core.config import settings
+from ..schemas.common import ScentData
 
 
 logger = logging.getLogger(__name__)
 
-
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-#cache-friendly for ChatGPT
-
+# Cache-friendly prompt for ChatGPT
 SCENT_EXTRACTION_PROMPT = """Extract scent information from text. If explicit scent/perfume info exists, extract it. If no scents are mentioned, infer fragrance notes based on context, emotions, imagery, or themes.
 
 Take into account the emotion: "{emotion}" and occasion: "{occasion}" the user has submitted alongside the text, if present. Use these to guide your fragrance note suggestions.
@@ -58,7 +61,13 @@ Examples:
 
 If absolutely no context exists, generate at least one note at any one suitable layer based on common pleasant scents, otherwise, generate more."""
 
-def extract_scents(text: str, emotion: str, occasion: str) -> dict:
+
+def extract_scents(
+    text: str,
+    emotion: Optional[str],
+    occasion: Optional[str]
+) -> ScentData:
+
     logger.info("API call started to extract")
 
     formatted_prompt = SCENT_EXTRACTION_PROMPT.format(
@@ -82,9 +91,12 @@ def extract_scents(text: str, emotion: str, occasion: str) -> dict:
     )
 
     usage = response.usage
-    if hasattr(usage, 'prompt_tokens_details'):
+    if usage and hasattr(usage, 'prompt_tokens_details'):
         cached_tokens = getattr(usage.prompt_tokens_details, 'cached_tokens', 0)
         if cached_tokens > 0:
             logger.info(f"Cache hit: {cached_tokens} tokens cached")
-    
-    return json.loads(response.choices[0].message.content)
+
+    content = response.choices[0].message.content
+    if content:
+        return json.loads(content)
+    return {}

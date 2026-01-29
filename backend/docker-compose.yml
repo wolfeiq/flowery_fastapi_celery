@@ -21,10 +21,11 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme_redis_password}
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme_redis_password}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -33,11 +34,23 @@ services:
       - app-network
 
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.5.23
+    environment:
+      CHROMA_SERVER_AUTHN_PROVIDER: chromadb.auth.token_authn.TokenAuthenticationServerProvider
+      CHROMA_SERVER_AUTHN_CREDENTIALS: ${CHROMA_AUTH_TOKEN:-changeme_chroma_token}
+      CHROMA_AUTH_TOKEN_TRANSPORT_HEADER: X-Chroma-Token
+      IS_PERSISTENT: "true"
+      PERSIST_DIRECTORY: /chroma/chroma
+      ANONYMIZED_TELEMETRY: "false"
     ports:
       - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
     networks:
       - app-network
@@ -55,22 +68,24 @@ services:
       DATABASE_NAME: scent_memory
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      
+
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
-      REDIS_URL: redis://redis:6379/0
-      
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme_redis_password}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
+
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      
+      CHROMA_AUTH_TOKEN: ${CHROMA_AUTH_TOKEN:-changeme_chroma_token}
+
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       AUTH_KEY: ${AUTH_KEY}
       GENIUS_ACCESS_TOKEN: ${GENIUS_ACCESS_TOKEN:-}
-      
+
       ENVIRONMENT: ${ENVIRONMENT:-development}
       DEBUG: ${DEBUG:-False}
-      
+
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
 
       SENTRY_DSN: ${SENTRY_DSN:-}
@@ -83,6 +98,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      chromadb:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -107,15 +124,20 @@ services:
       DATABASE_NAME: scent_memory
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      
+
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
-      REDIS_URL: redis://redis:6379/0
-      
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme_redis_password}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379/0
+
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      CHROMA_AUTH_TOKEN: ${CHROMA_AUTH_TOKEN:-changeme_chroma_token}
+
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       AUTH_KEY: ${AUTH_KEY}
-      
+
       ENVIRONMENT: ${ENVIRONMENT:-development}
     depends_on:
       postgres:
