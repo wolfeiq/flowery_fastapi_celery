@@ -44,7 +44,7 @@ Content to summarize:
         )
         
         summary = response.choices[0].message.content.strip()
-        logger.info(f"Generated summary: {summary[:50]}...")
+        logger.debug("Summary generated successfully")
         return summary
         
     except Exception as e:
@@ -58,5 +58,5 @@ Content to summarize:
             else:
                 fallback += "..."
         
-        logger.warning(f"Using fallback summary: {fallback[:50]}...")
+        logger.warning("Using fallback summary due to generation failure")
         return fallback

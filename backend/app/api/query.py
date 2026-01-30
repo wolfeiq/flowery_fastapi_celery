@@ -127,7 +127,6 @@ def search_memories(
     chunks = db.query(MemoryChunk).filter(MemoryChunk.id.in_(chunk_ids)).all()
     context = "\n\n".join([f"Memory: {c.content}" for c in chunks])
 
-    logger.info(f"Context being sent to LLM: {context[:500]}...")
     cache_key_data = f"{current_user.id}:{context}:{request_q}"
 
     # Check exact cache hit
