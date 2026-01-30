@@ -1,5 +1,5 @@
 import { useMutation, UseMutationResult } from '@tanstack/react-query';
-import { queryApi, SearchResult, FeedbackRequest } from '@/lib/api';
+import { queryApi, SearchResult, FeedbackRequest, FeedbackResponse } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { AxiosError } from 'axios';
 
@@ -19,8 +19,8 @@ interface SubmitFeedbackInput {
   feedback: FeedbackRequest;
 }
 
-export function useQueryFeedback(): UseMutationResult<void, AxiosError, SubmitFeedbackInput> {
-  return useMutation<void, AxiosError, SubmitFeedbackInput>({
+export function useQueryFeedback(): UseMutationResult<FeedbackResponse, AxiosError, SubmitFeedbackInput> {
+  return useMutation<FeedbackResponse, AxiosError, SubmitFeedbackInput>({
     mutationFn: ({ queryId, feedback }) => queryApi.feedback(queryId, feedback),
     onSuccess: () => {
       toast.success('Feedback submitted!');
