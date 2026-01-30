@@ -9,16 +9,18 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 class ScentProfile(Base):
     __tablename__ = "scent_profiles"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    preferred_families = Column(ARRAY(String), default=list) 
+    preferred_families = Column(ARRAY(String), default=list)
     note_occurrence_counts = Column(JSONB, default=dict)
-    disliked_notes = Column(ARRAY(String), default=list)            
-    emotional_preferences: Mapped[list] = mapped_column(ARRAY(String))                              
+    disliked_notes = Column(ARRAY(String), default=list)
+    emotional_preferences: Mapped[list] = mapped_column(ARRAY(String))
+    intensity_preference = Column(String(50), nullable=True)
+    budget_range = Column(String(50), nullable=True)
     total_memories = Column(Integer, default=0)
     total_queries = Column(Integer, default=0)
-    profile_data = Column(JSON, default=dict)  
+    profile_data = Column(JSON, default=dict)
     last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     user = relationship("User", back_populates="scent_profile")
