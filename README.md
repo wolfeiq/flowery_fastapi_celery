@@ -44,11 +44,11 @@ build in public @portable_writer on X
 - Automate fine-tuning and deployment ✅
 - Frontend Design ✅
 - Frontend Websockets ✅
-- Frontend -> Graph Visuals with Three.js
+- Frontend -> Graph Visuals with Three.js ✅
 - Load Caching ✅
 - Limit to Three Memories Upload/Day ✅
 - Processing of images and pdfs happens in transit ✅
-- DevOps with Kubernetes + Docker
+- Basic Testing ✅
 
 Basically:
 
@@ -98,4 +98,5 @@ erDiagram
     FineTuningJob ||--o{ TrainingExample : "uses"
 
 
-![Login Screen](assets/screenshot.png)
+![Login Screen](assets/screenshot_p.png)
+![Login Screen 2](assets/screenshot_p2.png)
