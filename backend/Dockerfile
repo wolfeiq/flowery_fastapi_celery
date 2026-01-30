@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --user --retries 3 --timeout 60 -r requirements.txt
 
 
 FROM python:3.12-slim
